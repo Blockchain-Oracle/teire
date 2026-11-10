@@ -43,6 +43,10 @@ after the key is created.
 **CLI key** (an ordinary key, not a service key)
 - Name: `teire-cli`
 
+The first key made (2026-11-10) is an ordinary key: it is saved as `OTARI_API_KEY` and runs
+everything today, billed to the key. Per-person and per-installation allowances start working the
+moment a service key is saved as `OTARI_SERVICE_KEY` (the gateway checks the key type itself).
+
 Give both keys to Claude through the secrets file, never in chat:
 `/Users/abu/dev/hackathon/otari/.secrets/teire-otari.env`, lines `OTARI_SERVICE_KEY=…` and
 `OTARI_CLI_KEY=…`.
@@ -55,7 +59,11 @@ Give both keys to Claude through the secrets file, never in chat:
 
 ## 5. Tools (Workspace → Tools)
 
-- Web search: Follow the deployment default (or Allowed).
+Checked on 2026-11-10 with `GET /api/v1/tools`: code execution is available; **web search and web
+fetch answer `workspace_disabled`**. Turn both on:
+
+- Web search: Allowed.
+- Web fetch: Allowed.
 - Code execution: Follow the deployment default (or Allowed).
 - MCP servers: nothing to add. Teire passes Context7 and its own MCP server inline per request.
 
