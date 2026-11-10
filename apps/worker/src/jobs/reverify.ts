@@ -380,19 +380,7 @@ export async function reverifyRun(ctx: WorkerContext, runId: string) {
           ]
         : [];
 
-    let reading: Promise<boolean> | null = null;
-    const stillPublic = () => {
-      reading ??= githubRepoNow(owner, name, octokit, null)
-        .then(async (r) => {
-          if (r.isPrivate === true && !repo.isPrivate) await setRepo(db, repo.id, { isPrivate: true });
-          return r.isPrivate === false;
-        })
-        .finally(() => {
-          reading = null;
-        });
-      return reading;
-    };
-    const selected = await selectBackend(process.env, { isPrivate: now.isPrivate ?? true, stillPublic });
+    const selected = await selectBackend(process.env);
     // The installs read private registries as the fix's did (S18.7).
     const registries = await authorizedRegistries(db, repo.installationId, discoverRegistries(tree));
     const backend = withRegistries(

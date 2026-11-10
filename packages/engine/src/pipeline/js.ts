@@ -6,6 +6,7 @@ import { lookupDocs } from "../fix/context7";
 import { type FixRun, runFix } from "../fix/run";
 import type { RequestUpgrade, Transaction } from "../fix/transaction";
 import { jsTransaction } from "../fix/upgrade-js";
+import type { Ai } from "../gateway";
 import { composeFixPullRequest, type RepoRef } from "../github/compose";
 import {
   assess,
@@ -17,7 +18,6 @@ import {
 import { type JsProject, readJsInventory } from "../inventory/js";
 import { jsTargetPolicy, readJsUpgradePolicy } from "../inventory/js-policy";
 import type { RepoTree } from "../inventory/tree";
-import type { ModelPrice, TokenFactory } from "../llm";
 import { type LocateResult, locateTs } from "../locate/ts";
 import { documentsForReading, extractNotes, migrationNotes, noteRecords } from "../notes/extract";
 import { declaredPackageNotes, gatherNpmNotes, githubRepoOf } from "../notes/sources";
@@ -255,8 +255,7 @@ export async function assessJsRepo(repoDir: string, tree: RepoTree, options: Ass
 }
 
 export interface FixDependencyInput {
-  tf: TokenFactory;
-  prices?: Map<string, ModelPrice>;
+  ai: Ai;
   backend: VerifyBackend;
   backendNote: string;
   runId: string;
@@ -311,7 +310,7 @@ export async function fixJsDependency(input: FixDependencyInput): Promise<FixDep
   const target = decision.to;
   const from = a.instance.version;
 
-  // Release notes, read by Nemotron 3 Ultra behind the quote gate.
+  // Release notes, read by the reader model behind the quote gate.
   input.onEvent?.({ step: "transaction", detail: `reading release notes ${from} → ${target}` });
   const { sources } = await gatherNpmNotes(a.instance.name, from, target, options);
   // The repository's own teire.yml changelog for this package goes first (S16.1), never public (D53).
@@ -332,19 +331,14 @@ export async function fixJsDependency(input: FixDependencyInput): Promise<FixDep
   } else if (declared.note) input.onEvent?.({ step: "transaction", detail: declared.note });
   const docs = documentsForReading(sources);
   const extraction = docs.length
-    ? await extractNotes(
-        input.tf,
-        docs,
-        {
-          name: a.instance.name,
-          from,
-          to: target,
-          removedApis: (a.summary?.breaking ?? []).flatMap((f) =>
-            f.callSites.map((c) => c.snippet.trim().slice(0, 80)),
-          ),
-        },
-        input.prices,
-      )
+    ? await extractNotes(input.ai, docs, {
+        name: a.instance.name,
+        from,
+        to: target,
+        removedApis: (a.summary?.breaking ?? []).flatMap((f) =>
+          f.callSites.map((c) => c.snippet.trim().slice(0, 80)),
+        ),
+      })
     : null;
   const notes = extraction ? migrationNotes(extraction) : [];
   const behaviour = extraction
@@ -369,8 +363,7 @@ export async function fixJsDependency(input: FixDependencyInput): Promise<FixDep
   const plan = withVerifyOverrides(detectJsChecks(input.tree, a.project), a.project.root, input.verify);
   const run = await runFix({
     verify: input.verify,
-    tf: input.tf,
-    prices: input.prices,
+    ai: input.ai,
     backend: input.backend,
     runId: input.runId,
     repoDir: input.repoDir,

@@ -380,9 +380,28 @@ export const llmCalls = pgTable(
     tokensCached: integer("tokens_cached").notNull().default(0),
     costUsd: numeric("cost_usd", { precision: 12, scale: 6 }).notNull().default("0"),
     latencyMs: integer("latency_ms"),
+    /** Otari's receipt (0028): who paid, which call it was, what answered and what it ran. */
+    installationId: githubId("installation_id"),
+    repoId: githubId("repo_id"),
+    endUser: text("end_user"),
+    requestId: text("request_id"),
+    servedModel: text("served_model"),
+    provider: text("provider"),
+    fallback: boolean("fallback").notNull().default(false),
+    attempts: integer("attempts"),
+    pricingSource: text("pricing_source"),
+    toolCalls: jsonb("tool_calls").$type<unknown[]>().notNull().default([]),
+    guardrails: jsonb("guardrails").$type<unknown[]>().notNull().default([]),
+    status: text("status").$type<"done" | "failed" | "cancelled">().notNull().default("done"),
     createdAt: createdAt(),
   },
-  (t) => [index("llm_calls_run_idx").on(t.runId), index("llm_calls_created_idx").on(t.createdAt)],
+  (t) => [
+    index("llm_calls_run_idx").on(t.runId),
+    index("llm_calls_created_idx").on(t.createdAt),
+    index("llm_calls_installation_idx").on(t.installationId, t.createdAt),
+    index("llm_calls_repo_idx").on(t.repoId, t.createdAt),
+    index("llm_calls_request_idx").on(t.requestId),
+  ],
 );
 
 export const sandboxExecs = pgTable(
@@ -574,10 +593,10 @@ export const webhookDeliveries = pgTable(
   (t) => [index("webhook_deliveries_pending_idx").on(t.processedAt, t.receivedAt)],
 );
 
-/** Cache for Context7, Tavily and provider docs lookups, keyed by source + query. */
+/** Cache for Context7, web search and provider docs lookups, keyed by source + query. */
 export const docsCache = pgTable("docs_cache", {
   key: text("key").primaryKey(),
-  source: text("source").$type<"context7" | "tavily" | "provider">().notNull(),
+  source: text("source").$type<"context7" | "search" | "provider">().notNull(),
   body: text("body").notNull(),
   fetchedAt: timestamp("fetched_at", { withTimezone: true }).notNull().defaultNow(),
 });
@@ -775,6 +794,14 @@ export const assistantCalls = pgTable(
     costUsd: numeric("cost_usd", { precision: 12, scale: 6 }).notNull().default("0"),
     latencyMs: integer("latency_ms"),
     status: text("status").$type<"reserved" | "done" | "failed">().notNull().default("reserved"),
+    /** Otari's receipt (0028). */
+    endUser: text("end_user"),
+    requestId: text("request_id"),
+    servedModel: text("served_model"),
+    provider: text("provider"),
+    fallback: boolean("fallback").notNull().default(false),
+    toolCalls: jsonb("tool_calls").$type<unknown[]>().notNull().default([]),
+    guardrails: jsonb("guardrails").$type<unknown[]>().notNull().default([]),
     createdAt: createdAt(),
   },
   (t) => [index("assistant_calls_user_idx").on(t.userId, t.createdAt)],

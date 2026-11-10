@@ -1,7 +1,7 @@
 import { CATALOG } from "../constants";
 import type { ChangeV2 } from "../contract";
 import { fetchDiscoveredPage } from "../discover/page";
-import type { TavilyUsage } from "../discover/tavily";
+import type { WebUsage } from "../discover/web";
 import { plainText } from "../notes/extract";
 import { readAnthropic } from "./adapters/anthropic";
 import { readDeprecationTables } from "./adapters/deprecation-tables";
@@ -32,9 +32,9 @@ export interface ProviderIngest {
   outcomes: SourceOutcome[];
   /** Rows that could not become a valid v2 record (a reader bug, never silently dropped). */
   rejected: { id: string; error: string }[];
-  /** Nemotron readings of discovered pages, and Tavily extract calls (empty for the precision readers). */
+  /** Reader-model readings of discovered pages, and Otari web fetches (empty for the precision readers). */
   receipts: ReaderReceipt[];
-  tavily: TavilyUsage[];
+  web: WebUsage[];
   /** Items a model read that the quote check refused, with the reason. */
   dropped: { subject: string; reason: string }[];
 }
@@ -74,7 +74,7 @@ export async function ingestProvider(
   let changed = false;
   const records: ChangeRecord[] = [];
   const receipts: ReaderReceipt[] = [];
-  const tavily: TavilyUsage[] = [];
+  const web: WebUsage[] = [];
   const dropped: ProviderIngest["dropped"] = [];
   for (const source of provider.sources) {
     if (source.adapter === "discovered") {
@@ -93,7 +93,7 @@ export async function ingestProvider(
         provider.officialDomains,
         options.previous?.get(source.url),
       );
-      if (page.usage) tavily.push(page.usage);
+      if (page.usage) web.push(page.usage);
       if (page.result.status !== "changed") {
         outcomes.push(outcomeOf(source.url, page.result));
         continue;
@@ -142,7 +142,7 @@ export async function ingestProvider(
     outcomes,
     rejected,
     receipts,
-    tavily,
+    web,
     dropped,
   };
 }

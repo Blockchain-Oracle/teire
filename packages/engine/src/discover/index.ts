@@ -6,13 +6,13 @@ import type { RegistryOptions } from "../registry/clients";
 import { isApiEndpoint, linkScope, registrableDomain } from "./domains";
 import { discoverProvider, type ProviderCandidate } from "./pages";
 import { type SdkProfile, sdkProfile } from "./sdk";
-import type { TavilyUsage } from "./tavily";
+import type { WebUsage } from "./web";
 
 export * from "./domains";
 export * from "./page";
 export * from "./pages";
 export * from "./sdk";
-export * from "./tavily";
+export * from "./web";
 
 /**
  * Providers a repo talks to that have no reader (plan S04, D82). Two deterministic signals:
@@ -127,10 +127,10 @@ export async function providerCandidates(input: {
 export async function discoverProviders(
   candidates: ProviderCandidate[],
   options: RegistryOptions,
-): Promise<{ used: ProviderUse[]; usage: TavilyUsage[]; notes: string[] }> {
+): Promise<{ used: ProviderUse[]; usage: WebUsage[]; notes: string[] }> {
   const now = options.now ?? new Date();
   const used: ProviderUse[] = [];
-  const usage: TavilyUsage[] = [];
+  const usage: WebUsage[] = [];
   const notes: string[] = [];
   for (const candidate of candidates) {
     const cached = await options.cache.get("discovery", candidate.domain);

@@ -1,9 +1,9 @@
 import { execFileSync } from "node:child_process";
 import { matchesTarget, readTeireConfig } from "@teire/engine/config";
 import type { ChangeV2 } from "@teire/engine/contract";
+import { createGateway } from "@teire/engine/gateway";
 import type { FindingDraft } from "@teire/engine/impact";
 import { directoryTree, scopedTree } from "@teire/engine/inventory";
-import { createTokenFactory, fetchModelPrices, tokenFactoryConfigFromEnv } from "@teire/engine/llm";
 import {
   type ApiSources,
   type AssessedProject,
@@ -35,8 +35,8 @@ import { remoteCatalog } from "./catalog";
  * `teire scan` (card C11): the worker's scan, run locally on a checkout through the same engine
  * calls, so its findings match the dashboard's. Package checks read the registries; API-host and
  * model checks read Teire's public catalog, and read a provider's pages here when the service has
- * not (see `remoteCatalog`). Wrapped model IDs are traced with Nemotron only when
- * `TOKENFACTORY_API_KEY` is set, as on the service.
+ * not (see `remoteCatalog`). Wrapped model IDs are traced through Otari only when `OTARI_API_KEY`
+ * is set, as on the service (billed to that key; the CLI names no end user).
  */
 export interface ScanResult {
   root: string;
@@ -221,8 +221,7 @@ export async function scanPath(
     options.progress?.("looking for API hosts and model IDs in the code");
     const origin = options.origin ?? githubOrigin(dir);
     let triage: ApiSources["triage"];
-    if (process.env.TOKENFACTORY_API_KEY)
-      triage = { tf: createTokenFactory(tokenFactoryConfigFromEnv()), prices: await fetchModelPrices() };
+    if (process.env.OTARI_API_KEY) triage = { ai: await createGateway().as(null) };
     const catalog = remoteCatalog(options.catalogUrl, { cache, ...(triage ? { reader: triage } : {}) });
     try {
       const api = await assessApiChanges(
@@ -250,7 +249,7 @@ export async function scanPath(
       );
       if (!triage && open.length)
         notes.push(
-          `${open.length} model mention(s) not traced through wrappers or registries (Nemotron does this when TOKENFACTORY_API_KEY is set)`,
+          `${open.length} model mention(s) not traced through wrappers or registries (Otari's reader does this when OTARI_API_KEY is set)`,
         );
     } catch (error) {
       notes.push(

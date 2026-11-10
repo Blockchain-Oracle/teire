@@ -13,7 +13,7 @@ import {
   type ProviderCandidate,
   type ProviderUse,
   providerCandidates,
-  type TavilyUsage,
+  type WebUsage,
 } from "../discover";
 import { registrableDomain } from "../discover/domains";
 import type { CodemodEdit, MigrationNote } from "../fix/codemods";
@@ -58,8 +58,8 @@ export interface ApiAssessment {
   providers: ProviderUse[];
   /** The change records read for those providers. */
   records: ChangeV2[];
-  /** Providers found with no reader: candidates looked at, Tavily calls, and why any found nothing. */
-  discovery: { candidates: number; usage: TavilyUsage[]; notes: string[] };
+  /** Providers found with no reader: candidates looked at, Otari web calls, and why any found nothing. */
+  discovery: { candidates: number; usage: WebUsage[]; notes: string[] };
   /** Nemotron readings that traced wrapped model IDs (empty without `triage`). */
   receipts: TriageReceipt[];
   /** What the OpenAPI comparison looked at per host, or why it compared nothing. */
@@ -108,7 +108,7 @@ export function declaredProviders(declared: DeclaredSource[], now = new Date()):
         officialDomains: [domain],
         sources: [{ kind: "custom", url: d.changelogUrl, adapter: "discovered" }],
         detection: { imports: [], envVars: [], baseUrls: [d.host], calls: [] },
-        discovery: { at: now.toISOString(), via: ["teire.yml"], tavilyCredits: 0, evidence: ["teire.yml"] },
+        discovery: { at: now.toISOString(), via: ["teire.yml"], searches: 0, evidence: ["teire.yml"] },
       }),
       via: ["teire.yml"],
     });
@@ -695,8 +695,7 @@ export async function fixApiChanges(
   const notes = providerNotes(records, input.related, wordsIn(input.repoDir, input.tree));
   const run = await runFix({
     verify: input.verify,
-    tf: input.tf,
-    prices: input.prices,
+    ai: input.ai,
     backend: input.backend,
     runId: input.runId,
     repoDir: input.repoDir,

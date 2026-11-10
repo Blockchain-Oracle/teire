@@ -7,6 +7,7 @@
 
 import type { ChangeV2, DependencyInstance } from "../src/contract";
 import { jsTransaction, lockfileCommand, lookupDocs, planManifestEdits, runFix } from "../src/fix";
+import { createGateway } from "../src/gateway";
 import {
   assess,
   type DependencyVerdict,
@@ -22,7 +23,6 @@ import {
   readJsInventory,
   readJsUpgradePolicy,
 } from "../src/inventory";
-import { createTokenFactory, fetchModelPrices, tokenFactoryConfigFromEnv } from "../src/llm";
 import { locateTs } from "../src/locate";
 import {
   documentsForReading,
@@ -153,21 +153,20 @@ async function runFixStep(ctx: {
   project_tree: RepoTree;
 }) {
   const { instance, target } = ctx;
-  const tf = createTokenFactory(tokenFactoryConfigFromEnv());
-  const prices = await fetchModelPrices();
-  log(`\n  ## Notes (${tf.modelId("reader")})`);
+  const ai = await createGateway().as(null);
+  log(`\n  ## Notes (${ai.modelId("reader")})`);
   const { sources } = await gatherNpmNotes(instance.name, instance.version ?? "", target, {
     ...options,
     githubToken: process.env.GITHUB_TOKEN,
   });
   for (const s of sources) log(`  source: ${s.kind} ${s.url}`);
   const removedApis = ctx.findings.flatMap((f) => f.callSites.map((c) => c.snippet.trim().slice(0, 80)));
-  const extraction = await extractNotes(
-    tf,
-    documentsForReading(sources),
-    { name: instance.name, from: instance.version ?? "", to: target, removedApis },
-    prices,
-  );
+  const extraction = await extractNotes(ai, documentsForReading(sources), {
+    name: instance.name,
+    from: instance.version ?? "",
+    to: target,
+    removedApis,
+  });
   const notes = migrationNotes(extraction);
   log(
     `  ${extraction.items.length} item(s) kept with verified quotes, ${extraction.dropped.length} dropped; ${notes.length} migration note(s); $${extraction.receipt.costUsd.toFixed(4)}`,
@@ -183,11 +182,10 @@ async function runFixStep(ctx: {
   const targetLayout = await npmTypesLayout(instance.name, target, options);
   const plan = detectJsChecks(tree, ctx.project);
   const { backend, note } = await selectBackend();
-  log(`\n  ## Fix (${tf.modelId("agent")} agent, ${tf.modelId("failover")} failover; ${note})`);
+  log(`\n  ## Fix (${ai.modelId("fixer")} via Otari; ${note})`);
   log(`  checks: ${plan.checks.map((k) => `${k.name}: ${k.argv.join(" ")}`).join(" | ")}`);
   const run = await runFix({
-    tf,
-    prices,
+    ai,
     backend,
     runId: `s02a-${Date.now().toString(36)}`,
     repoDir: checkout.dir,

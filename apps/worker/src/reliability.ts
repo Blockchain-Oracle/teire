@@ -1,13 +1,14 @@
 import { and, type Database, eq, gte, llmCalls, lt, runs, scans, sql, systemState } from "@teire/db";
 import { ASSISTANT, DAILY_COST_CAP_DEFAULT_USD, RUNS } from "@teire/engine/constants";
+import { pingModel } from "@teire/engine/gateway";
 import type { GitHubApp } from "@teire/engine/github";
-import { createTokenFactory, modelHealth, ping, tokenFactoryConfigFromEnv } from "@teire/engine/llm";
+import { aiFor } from "./gateway";
 import { orphanedQueuedRuns } from "./store";
 
 /**
  * Reliability (plan S10): what keeps runs honest when the worker, the model service or the money
- * stops. A run without a heartbeat is failed cleanly (and retried by its queue); a Token Factory
- * 402 pauses model work until a ping succeeds; a daily spend cap defers runs with a clear reason;
+ * stops. A run without a heartbeat is failed cleanly (and retried by its queue); an empty Otari
+ * balance (402) pauses model work until a ping succeeds; a daily spend cap defers runs with a clear reason;
  * webhook deliveries GitHub could not hand over are redelivered. State lives in `system_state` and
  * the /trust page shows it.
  */
@@ -221,13 +222,13 @@ export function startTicker(
       if (orphans.length)
         console.log(`[reaper] sent ${orphans.length} queued run(s) with no job back to the queue`);
     }
-    await setState(db, "models", { at: new Date().toISOString(), unhealthy: modelHealth() });
     const credits = await getState<CreditsState>(db, "credits");
     if (credits?.exhausted && Date.now() - Date.parse(credits.checkedAt) > RELIABILITY.creditsRecheckMs) {
       try {
-        await ping(createTokenFactory(tokenFactoryConfigFromEnv()), "reader");
+        // One tiny real call (a few tokens on the reader, billed to the key): a balance check needs a model to answer.
+        await pingModel(await aiFor(null));
         await setState(db, "credits", { ...credits, exhausted: false, checkedAt: new Date().toISOString() });
-        console.log("[credits] Token Factory answers again; model work resumes");
+        console.log("[credits] Otari answers again; model work resumes");
       } catch (error) {
         await setState(db, "credits", {
           ...credits,

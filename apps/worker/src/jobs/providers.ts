@@ -7,23 +7,21 @@ import {
 } from "@teire/engine/catalog";
 import { CATALOG } from "@teire/engine/constants";
 import type { ChangeV2 } from "@teire/engine/contract";
-import { createTokenFactory, fetchModelPrices, tokenFactoryConfigFromEnv } from "@teire/engine/llm";
 import type { ProviderChanges } from "@teire/engine/pipeline";
 import { cachedExtraction } from "../caches";
-import { changeHash, recordLlmCall, upsertChange } from "../store";
+import { type aiFor, catalogAi } from "../gateway";
+import { changeHash, llmCallRow, recordLlmCall, upsertChange } from "../store";
 
 /**
- * Nemotron for providers found by discovery (no hand-written reader): built on first use, with every
- * reading cached per (model, prompt) in `extraction_cache`, so a page is paid for once.
+ * The reader model through Otari, billed to `ai`'s end user (Teire's catalog for provider pages, an
+ * installation for its own scan's triage), with every reading cached per (model, prompt) in
+ * `extraction_cache`, so a page is paid for once whoever reads it next.
  */
-let reader: Promise<PageReader> | null = null;
-export function pageReader(db: Database): Promise<PageReader> {
-  reader ??= (async () => ({
-    tf: createTokenFactory(tokenFactoryConfigFromEnv()),
-    prices: await fetchModelPrices().catch(() => undefined),
+export async function pageReader(db: Database, ai?: Awaited<ReturnType<typeof aiFor>>): Promise<PageReader> {
+  return {
+    ai: ai ?? (await catalogAi()),
     cached: (model, promptHash, compute) => cachedExtraction(db, model, promptHash, compute),
-  }))();
-  return reader;
+  };
 }
 
 /**
@@ -55,9 +53,10 @@ async function refresh(db: Database, provider: ProviderRecord): Promise<number> 
     known.map((s) => [s.url, { etag: s.etag, lastModified: s.lastModified, contentHash: s.lastHash }]),
   );
   const discovered = provider.sources.some((s) => s.adapter === "discovered");
+  const reader = discovered ? await pageReader(db) : null;
   const run = await ingestProvider(provider, {
     previous,
-    ...(discovered ? { reader: await pageReader(db) } : {}),
+    ...(reader ? { reader } : {}),
   });
   const kinds = new Map(provider.sources.map((s) => [s.url, s.kind]));
   for (const o of run.outcomes) {
@@ -110,21 +109,19 @@ async function refresh(db: Database, provider: ProviderRecord): Promise<number> 
   // Every model reading is on the books (spend, the daily budget), even outside a run.
   for (const r of run.receipts)
     if (!r.cached)
-      await recordLlmCall(db, {
-        runId: null,
-        purpose: "provider-page",
-        step: provider.slug,
-        model: r.model,
-        tokensIn: r.tokensIn,
-        tokensCached: r.tokensCached,
-        tokensOut: r.tokensOut,
-        costUsd: r.costUsd.toFixed(6),
-        latencyMs: r.ms,
-      });
+      await recordLlmCall(
+        db,
+        llmCallRow(r, {
+          runId: null,
+          purpose: "provider-page",
+          step: provider.slug,
+          endUser: reader?.ai.endUser?.id ?? null,
+        }),
+      );
   const cost = run.receipts.reduce((n, r) => n + (r.cached ? 0 : r.costUsd), 0);
-  if (run.receipts.length || run.tavily.length)
+  if (run.receipts.length || run.web.length)
     console.log(
-      `[providers] ${provider.slug}: ${run.receipts.length} page reading(s) by ${run.receipts[0]?.model ?? "-"} ($${cost.toFixed(4)}), Tavily ${run.tavily.reduce((n, u) => n + u.credits, 0)} credit(s)`,
+      `[providers] ${provider.slug}: ${run.receipts.length} page reading(s) by ${run.receipts[0]?.servedModel ?? run.receipts[0]?.model ?? "-"} ($${cost.toFixed(4)}), ${run.web.length} Otari web fetch(es)`,
     );
   console.log(
     `[providers] ${provider.slug}: ${run.unchanged ? "unchanged" : `${run.records.length} records`}, ${written} written`,

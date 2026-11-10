@@ -8,12 +8,12 @@
  * Run: pnpm --filter @teire/engine exec tsx --env-file=../../.env.local scripts/repo.ts owner/repo [--fix=<package>] [--api] [--fix-api=<group>]
  */
 import { readTeireConfig } from "../src/config";
+import { createGateway } from "../src/gateway";
 import { directoryTree, fetchRepoTarball } from "../src/inventory";
 import type { JvmProject } from "../src/inventory/jvm";
 import type { PyProject } from "../src/inventory/python";
 import type { RubyProject } from "../src/inventory/ruby";
 import type { RustProject } from "../src/inventory/rust";
-import { createTokenFactory, fetchModelPrices, tokenFactoryConfigFromEnv } from "../src/llm";
 import {
   type Assessment,
   assessApiChanges,
@@ -97,12 +97,10 @@ for (const a of all) {
 if (fixName) {
   const target = all.find((a) => a.instance.name === fixName && a.decision?.kind === "upgrade");
   if (!target) throw new Error(`no upgrade for ${fixName}`);
-  const tf = createTokenFactory(tokenFactoryConfigFromEnv());
-  const prices = await fetchModelPrices();
+  const ai = await createGateway().as(null);
   const { backend, note } = await selectBackend();
   const common = {
-    tf,
-    prices,
+    ai,
     backend,
     backendNote: note,
     runId: `repo-${Date.now().toString(36)}`,
@@ -164,7 +162,7 @@ if (fixName) {
 if (api) {
   // Only the providers this repo talks to are read, live (the worker caches them across repos).
   const instances = await repoInstances(checkout.dir, tree);
-  const reader = { tf: createTokenFactory(tokenFactoryConfigFromEnv()), prices: await fetchModelPrices() };
+  const reader = { ai: await createGateway().as(null) };
   const api = await assessApiChanges(checkout.dir, tree, instances, {
     changes: liveProviderChanges({ reader }),
     discover: options,
@@ -186,7 +184,7 @@ if (api) {
     );
   if (discovery.usage.length || discovery.notes.length)
     log(
-      `   discovery: ${discovery.candidates} candidate(s), Tavily ${discovery.usage.map((u) => `${u.endpoint} ${u.credits} credit(s)`).join(", ") || "not called"}${discovery.notes.length ? `; ${discovery.notes.join("; ")}` : ""}`,
+      `   discovery: ${discovery.candidates} candidate(s), web ${discovery.usage.map((u) => u.endpoint).join(", ") || "not called"}${discovery.notes.length ? `; ${discovery.notes.join("; ")}` : ""}`,
     );
   log(
     `## Provider changes (${records.length} records read; ${scan.filesScanned} files, ${scan.languages.join(", ")}, ${scan.ms} ms)`,
@@ -203,13 +201,12 @@ if (api) {
   if (fixApi) {
     const group = findings.filter((f) => f.groupKey === fixApi);
     if (!group.length) throw new Error(`no findings in group ${fixApi}`);
-    const tf = createTokenFactory(tokenFactoryConfigFromEnv());
+    const ai = await createGateway().as(null);
     const { backend, note } = await selectBackend();
     const provider = records.find((r) => r.id === group[0]?.changeId)?.subject.provider;
     log(`\n## Fix ${fixApi} (${note})`);
     const result = await fixApiChanges({
-      tf,
-      prices: await fetchModelPrices(),
+      ai,
       backend,
       backendNote: note,
       runId: `repo-api-${Date.now().toString(36)}`,

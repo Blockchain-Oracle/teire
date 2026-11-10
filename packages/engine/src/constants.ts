@@ -15,52 +15,57 @@ export const SITE = {
   sourceUrl: "https://github.com/Blockchain-Oracle/teire",
 } as const;
 
-export const TOKENFACTORY = {
-  /** OpenAI-compatible base URL (Token Factory quickstart). */
-  defaultBaseUrl: "https://api.tokenfactory.nebius.com/v1/",
-  /** AI SDK provider name; provider options are keyed by it (providerOptions.tokenfactory). */
-  providerName: "tokenfactory",
-  /** Attempts per request on 429/5xx/dropped connections (S10), backoff doubling from this. */
-  attempts: 4,
-  backoffMs: 2000,
-  maxRetryAfterMs: 30_000,
-  /** A model that keeps failing is skipped for this long; its requests go to the failover model. */
-  unhealthyForMs: 10 * 60_000,
-} as const;
-
-/** NVIDIA Nemotron settings from the Nemotron 3 Super model card (Ultra and 3.5 Super take the same). */
-export const NEMOTRON = {
-  temperature: 1.0,
-  topP: 0.95,
+/**
+ * Otari (mozilla.ai), the gateway every model call goes through: one key, the served model, provider,
+ * fallback and real cost on each response, and per-person and per-installation budgets (plan S01).
+ */
+export const GATEWAY = {
+  /** OpenAI-compatible base URL; `/api` is part of it (without it Otari answers 404). */
+  baseUrl: "https://api.otari.ai/api/v1",
+  /** AI SDK provider name: request options travel as `providerOptions.otari`, metadata comes back under it. */
+  providerName: "otari",
+  /** Otari's server-side tool loop (web search, fetch, code, MCP): its default rounds, and its cap is 25. */
+  maxToolIterations: 10,
 } as const;
 
 /**
- * Model per job, chosen on results, not price (scripts/compare-models.ts, 2026-10-24):
- * agent  — writes and repairs code (Ultra: 3/3 correct fixes vs Super 2/3);
- * reader — extraction and triage, reasoning on (Ultra: 29/29 records on every run);
- * failover — used only while the other model is unavailable: Nemotron 3.5 Super, which replaced
- *   Nemotron 3 Super when Token Factory retired it on 2026-11-09 (same price; function calling and the
- *   same chat-template flags, checked live on 2026-10-30).
- * assistant — Ask Teire's chat (plan revision 3.3, D120), thinking off, chosen for speed. Measured on
- *   Token Factory on 2026-10-29: Ultra answered in 0.4–0.7 s per call and Super in 6–10 s, so chat
- *   runs on Ultra (about $0.01 a reply) and fails over to Super (assistantFailover), per role.
+ * The model behind each job. A catalog id (`vendor/model`) lets Otari choose among that model's hosts
+ * and fall back between them; `TEIRE_MODEL_<ROLE>` replaces it with another id, a `provider:model`
+ * selector or a routing-policy name (S02). All open-weight, all with tool calls and structured output
+ * in Otari's catalog (read 2026-11-10):
+ * fixer      — writes and repairs code in the agent loop (GLM 5.3: fireworks, together, nebius, mistral);
+ * reviewer   — checks a fix and a bump's notes (DeepSeek V4 Pro);
+ * reader     — extraction and triage, many short calls (DeepSeek V4.1 Flash, the cheapest of the set);
+ * researcher — reads the web and docs before a fix (MiniMax M3, S04);
+ * assistant  — Ask Teire's chat, chosen for speed and price (gpt-oss-120b on five hosts).
  */
-export const MODEL_ENV = {
-  agent: "TEIRE_MODEL_AGENT",
+export const ROLE_ENV = {
+  fixer: "TEIRE_MODEL_FIXER",
+  reviewer: "TEIRE_MODEL_REVIEWER",
   reader: "TEIRE_MODEL_READER",
-  failover: "TEIRE_MODEL_FAILOVER",
+  researcher: "TEIRE_MODEL_RESEARCHER",
   assistant: "TEIRE_MODEL_ASSISTANT",
-  assistantFailover: "TEIRE_MODEL_ASSISTANT_FAILOVER",
 } as const;
 
-/** The same choice when its env var is unset (the CLI, run with only a Token Factory key). */
-export const MODEL_DEFAULTS: Record<keyof typeof MODEL_ENV, string> = {
-  agent: "nvidia/Nemotron-3-Ultra-550b-a55b",
-  reader: "nvidia/Nemotron-3-Ultra-550b-a55b",
-  failover: "nvidia/Nemotron-3.5-Super-VL",
-  assistant: "nvidia/Nemotron-3-Ultra-550b-a55b",
-  assistantFailover: "nvidia/Nemotron-3.5-Super-VL",
+export const ROLE_DEFAULTS: Record<keyof typeof ROLE_ENV, string> = {
+  fixer: "z-ai/glm-5.3",
+  reviewer: "deepseek/deepseek-v4-pro-0813",
+  reader: "deepseek/deepseek-v4.1-flash-1017",
+  researcher: "minimax/minimax-m3",
+  assistant: "openai/gpt-oss-120b",
 };
+
+/**
+ * Who a call is billed to on Otari (an end user of the service key). People and installations each
+ * get their own daily allowance; work nobody owns is billed to Teire's two shared end users. The
+ * budget names are the dashboard's (docs/otari-setup.md); a new end user starts on its budget.
+ */
+export const END_USERS = {
+  person: { prefix: "gh:", budget: "teire-person-daily" },
+  installation: { prefix: "inst:", budget: "teire-installation-daily" },
+  operator: { id: "teire:operator", budget: "teire-operator-daily" },
+  catalog: { id: "teire:catalog", budget: "teire-catalog-daily" },
+} as const;
 
 /** Ask Teire's limits (plan revision 3.3, U4, D127): per reply, per person per day, all of it per day. */
 /**
@@ -69,27 +74,16 @@ export const MODEL_DEFAULTS: Record<keyof typeof MODEL_ENV, string> = {
  */
 export const DAILY_COST_CAP_DEFAULT_USD = 10;
 
-/**
- * Token Factory prices (USD per 1M tokens, from its public catalog on 2026-10-29), used only when the
- * catalog can't be read, so a reply is never priced at $0.
- */
-export const FALLBACK_PRICES: Record<string, { input: number; cachedInput: number; output: number }> = {
-  "nvidia/Nemotron-3-Ultra-550b-a55b": { input: 1, cachedInput: 0.12, output: 3 },
-  "nvidia/Nemotron-3.5-Super-VL": { input: 0.3, cachedInput: 0.06, output: 0.9 },
-  // Retired 2026-11-09; kept so calls made before then still price.
-  "nvidia/nemotron-3-super-120b-a12b": { input: 0.3, cachedInput: 0.06, output: 0.9 },
-};
-
 export const ASSISTANT = {
   /** One reply's model time and tool steps. */
   replyMs: 60_000,
-  /** Lower than the agent's 1.0: chat answers read tool data back and must not wander from it. */
+  /** Low: chat answers read tool data back and must not wander from it. */
   temperature: 0.3,
   maxSteps: 8,
   maxOutputTokens: 2_000,
   /**
    * What a reply is reserved at before it runs; the receipt replaces it with what it cost. Most
-   * replies on Ultra cost $0.005–0.025; a long one can pass this, so a cap is exceeded by at most
+   * replies cost well under this; a long one can pass it, so a cap is exceeded by at most
    * one reply's difference.
    */
   estimateUsd: 0.05,
@@ -313,8 +307,8 @@ export const CATALOG = {
 
 /**
  * Providers with no reader (plan S04, D82): found from what the repo uses (an API host in its code,
- * an installed SDK's own base URL), their notice pages nominated by llms.txt and Tavily, read by
- * Nemotron 3 Ultra behind the quote gate.
+ * an installed SDK's own base URL), their notice pages nominated by llms.txt and Otari's web search,
+ * read by the reader model behind the quote gate.
  */
 export const DISCOVERY = {
   /** A provider's discovered notice pages are reused this long before the search runs again. */
@@ -332,19 +326,22 @@ export const DISCOVERY = {
   sdkMaxBytes: 48 * 1024 * 1024,
   /** Notice pages read per provider (deprecations first, then changelogs). */
   maxPagesPerProvider: 3,
-  tavily: {
-    url: "https://api.tavily.com",
-    searchDepth: "basic",
+  /** Otari's web search and fetch (`/api/v1/search`, `/api/v1/fetch`). */
+  search: {
     maxResults: 8,
+    /** Otari's `search_domain_filter` takes at most 20 domains. */
+    maxDomains: 20,
     timeoutMs: 30_000,
+    /** A fetched page's text is cut here (Otari's built-in fetcher reads at most 5 MiB). */
+    fetchMaxChars: 200_000,
   },
-  /** Text sent to Nemotron per call; longer pages are read in heading-aligned chunks. */
+  /** Text sent to the reader per call; longer pages are read in heading-aligned chunks. */
   chunkChars: 32_000,
   maxChunks: 4,
   readerMaxOutputTokens: 16_000,
-  /** A page whose own text is shorter than this is rendered by script: Tavily extract reads it. */
+  /** A page whose own text is shorter than this is rendered by script: Otari's fetch reads it. */
   minPageChars: 1_500,
-  /** Ambiguous model-ID sites (wrappers, registries) Nemotron traces per scan. */
+  /** Ambiguous model-ID sites (wrappers, registries) the reader traces per scan. */
   maxTriageSites: 24,
   triageMaxChars: 40_000,
 } as const;

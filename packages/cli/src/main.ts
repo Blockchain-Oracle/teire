@@ -37,8 +37,8 @@ Examples
 
 Environment (all optional)
   GITHUB_TOKEN           Higher GitHub rate limits (release notes, advisories, private repositories)
-  TOKENFACTORY_API_KEY   Trace model IDs kept in config or registries with Nemotron, as the service does
-  TAVILY_API_KEY         Find the notices of an API host Teire has not discovered yet
+  OTARI_API_KEY          An otari.ai key: trace model IDs kept in config or registries, read
+                         provider pages and search for an API host's notices, as the service does
   TEIRE_URL              Another Teire deployment (default ${SITE.url})
 
 Docs: ${SITE.url}/docs/build/cli

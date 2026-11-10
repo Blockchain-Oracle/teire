@@ -15,8 +15,10 @@ import {
 import { readTeireConfig } from "@teire/engine/config";
 import { PUBLIC_LIMITS } from "@teire/engine/constants";
 import { lineageKey } from "@teire/engine/contract";
+import { endUsers } from "@teire/engine/gateway";
 import { directoryTree, fetchRepoTarball, scopedTree } from "@teire/engine/inventory";
 import { advisoryStatus, coverageLines } from "@teire/engine/pipeline";
+import { aiFor } from "../gateway";
 import { modelWorkBlocked, RELIABILITY } from "../reliability";
 import { claimRun, finishScan, heartbeatScan, setRepo, startScan } from "../store";
 import { revalidateWeb } from "../web";
@@ -35,6 +37,20 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
  * GitHub App's user token lasts eight hours and only the web can refresh it, so an expired one is
  * never sent (GitHub would answer 401 and a public read would fail for nothing: Codex walk B10).
  */
+/**
+ * The Otari client billed to the person who asked (`gh:<GitHub account id>`): a public scan or a dry
+ * run spends that person's own daily allowance. Nobody signed in, nobody billed: no model work.
+ */
+export async function requesterAi(db: Database, userId: string | null | undefined) {
+  if (!userId) return null;
+  const [row] = await db
+    .select({ id: account.accountId })
+    .from(account)
+    .where(and(eq(account.userId, userId), eq(account.providerId, "github")))
+    .limit(1);
+  return row ? aiFor(endUsers.person(row.id)) : null;
+}
+
 export async function requesterToken(db: Database, userId: string | null | undefined) {
   if (!userId) return undefined;
   const [row] = await db
@@ -198,10 +214,11 @@ export async function publicScan(ctx: WorkerContext, publicScanId: string) {
       config,
       sha: head.sha,
       ...(token ? { token } : {}),
-      // GitHub said public just above; the probe re-reads it before any Token Factory upload (S19 review B12).
+      // GitHub said public just above.
       isPrivate: false,
       startedAt,
       blocked,
+      ai: blocked ? null : await requesterAi(db, request.requestedBy),
       // The report's live flow follows the scan (V5–V6 review).
       onStep: (step) => db.update(publicScans).set({ step }).where(eq(publicScans.id, publicScanId)),
     });

@@ -53,8 +53,8 @@ const needsModel = (p: ProviderRecord) => p.sources.some((s) => s.adapter === "d
  * Where a local scan's provider changes come from (D82: only providers the repo uses). A provider the
  * service reads is answered from the catalog. One it has not read yet is read here, through the
  * same readers and quote gate: hand-written readers need no model; discovered pages and teire.yml
- * sources need Nemotron (`reader`). An API host the service has not discovered is searched here only
- * with `TAVILY_API_KEY`, as the worker would.
+ * sources need the reader model through Otari (`reader`). An API host the service has not discovered
+ * is searched here only with `OTARI_API_KEY` (Otari's web search), as the worker would.
  */
 export function remoteCatalog(base: string, local: { cache: RegistryCache; reader?: PageReader }) {
   const notes: string[] = [];
@@ -88,7 +88,7 @@ export function remoteCatalog(base: string, local: { cache: RegistryCache; reade
     async get(scope, key) {
       if (scope !== "discovery") return local.cache.get(scope, key);
       const record = (await providers()).find((p) => p.discovery && p.officialDomains.includes(key)) ?? null;
-      if (record || process.env.TAVILY_API_KEY)
+      if (record || process.env.OTARI_API_KEY)
         return record
           ? {
               etag: null,
@@ -116,12 +116,12 @@ export function remoteCatalog(base: string, local: { cache: RegistryCache; reade
     ...new Set(notes),
     ...(unread.size
       ? [
-          `${list(unread)}: not in the public catalog yet; set TOKENFACTORY_API_KEY to read their pages here with Nemotron`,
+          `${list(unread)}: not in the public catalog yet; set OTARI_API_KEY to read their pages here through Otari`,
         ]
       : []),
     ...(undiscovered.size
       ? [
-          `${undiscovered.size} API host${undiscovered.size === 1 ? "" : "s"} the service has not looked up yet (${list(undiscovered)}); set TAVILY_API_KEY to search for their deprecation notices`,
+          `${undiscovered.size} API host${undiscovered.size === 1 ? "" : "s"} the service has not looked up yet (${list(undiscovered)}); set OTARI_API_KEY to search for their deprecation notices`,
         ]
       : []),
   ];

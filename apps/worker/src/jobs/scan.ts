@@ -9,6 +9,7 @@ import {
   upgradeOptions,
 } from "@teire/engine/config";
 import { ECOSYSTEMS, lineageKey } from "@teire/engine/contract";
+import type { Ai } from "@teire/engine/gateway";
 import {
   commitToBranch,
   composeOnboarding,
@@ -51,6 +52,7 @@ import { cargoSurfaceDiff, goSurfaceDiff } from "@teire/engine/surface";
 import { discoverRegistries, goPrivatePatterns, selectBackend, withRegistries } from "@teire/engine/verify";
 import { cachedSurfaceDiff, postgresRegistryCache } from "../caches";
 import { authorizedRegistries } from "../credentials";
+import { installationAi } from "../gateway";
 import { modelWorkBlocked, RELIABILITY } from "../reliability";
 import {
   changeHash,
@@ -62,6 +64,7 @@ import {
   getRepo,
   heartbeatScan,
   isWideInstallation,
+  llmCallRow,
   openArtifacts,
   openLineages,
   recentlySettled,
@@ -81,7 +84,6 @@ import {
 import { revalidateWeb } from "../web";
 import { matchesTarget, readOrgConfig } from "./commands";
 import { syncDashboard, syncHumanIssues } from "./dashboard";
-import { githubRepoNow } from "./fix";
 import { pageReader, storedProviderChanges } from "./providers";
 
 export interface WorkerContext {
@@ -247,6 +249,8 @@ export async function assessCheckout(
     isPrivate?: boolean;
     /** Why model work is paused, when it is (S10): page reading and triage are skipped. */
     blocked: string | null;
+    /** Who this scan's model calls are billed to on Otari (the installation, or a public scan's requester). */
+    ai: Ai | null;
     /** Providers whose pages just yielded new records: other repos using them rescan (D95). */
     onProviderChanges?: (slugs: string[]) => Promise<void>;
     /** Where the scan is, for a public report's live flow: the packages, the providers, the findings. */
@@ -272,22 +276,12 @@ export async function assessCheckout(
     : [];
   const goPrivate = goPrivatePatterns(tree);
   // The sandbox for scan-time type resolution (S19: rust-analyzer's index, the JVM's compiled
-  // classes), where the repository's privacy allows; chosen once, when a pipeline first needs it
-  // (S19 review B4, B12). Its installs reach the private registries the fix path's do, and a public
-  // repository is re-read from GitHub before each Token Factory upload, as a fix run's is.
-  let reading: Promise<boolean> | null = null;
-  const stillPublic = () => {
-    reading ??= githubRepoNow(owner, name, null, input.token ?? null)
-      .then((r) => r.isPrivate === false)
-      .finally(() => {
-        reading = null;
-      });
-    return reading;
-  };
+  // classes); opened once, when a pipeline first needs it (S19 review B4, B12). Its installs reach the
+  // private registries the fix path's do.
   const deadline = (input.startedAt ?? Date.now()) + RELIABILITY.scanProbeDeadlineMs;
   let probe: ReturnType<typeof openProbe> | null = null;
   const openProbe = () =>
-    selectBackend(process.env, { isPrivate: input.isPrivate ?? true, stillPublic }).then((s) => ({
+    selectBackend(process.env).then((s) => ({
       backend: withRegistries(s.backend, registries),
       tarball: {
         url: `https://api.github.com/repos/${fullName}/tarball/${input.sha}`,
@@ -410,27 +404,28 @@ export async function assessCheckout(
             !blocked,
           ),
           discover: { cache },
-          ...(blocked ? {} : { triage: await pageReader(db) }),
+          ...(blocked || !input.ai ? {} : { triage: await pageReader(db, input.ai) }),
           openapi: { cache, ...auth, repo: { owner, name, sha } },
           declared: config.sources,
         },
       );
   for (const n of api.openapiNotes) console.log(`[scan] ${fullName}: openapi ${n}`);
   await step("lines");
-  // Nemotron tracing wrapped model IDs during the scan: recorded like any other model call.
+  // The reader tracing wrapped model IDs during the scan: recorded like any other model call, on the
+  // repository and the installation that paid for it, so Usage shows it.
   for (const r of api.receipts)
     if (!r.cached)
-      await recordLlmCall(db, {
-        runId: null,
-        purpose: "triage",
-        step: fullName,
-        model: r.model,
-        tokensIn: r.tokensIn,
-        tokensCached: r.tokensCached,
-        tokensOut: r.tokensOut,
-        costUsd: r.costUsd.toFixed(6),
-        latencyMs: r.ms,
-      });
+      await recordLlmCall(
+        db,
+        llmCallRow(r, {
+          runId: null,
+          purpose: "triage",
+          step: fullName,
+          repoId,
+          installationId: input.installationId ?? null,
+          endUser: input.ai?.endUser?.id ?? null,
+        }),
+      );
   if (api.discovery.candidates)
     console.log(
       `[scan] ${fullName}: ${api.discovery.candidates} provider(s) with no reader; found ${
@@ -438,7 +433,7 @@ export async function assessCheckout(
           .filter((p) => p.provider.discovery)
           .map((p) => p.provider.slug)
           .join(", ") || "none"
-      }; Tavily ${api.discovery.usage.reduce((n, u) => n + u.credits, 0)} credit(s)${api.discovery.notes.length ? `; ${api.discovery.notes.join("; ")}` : ""}`,
+      }; Otari web ${api.discovery.usage.map((u) => u.endpoint).join(", ") || "not called"}${api.discovery.notes.length ? `; ${api.discovery.notes.join("; ")}` : ""}`,
     );
   // Runtimes the repo runs, against their end of life (notices, never PRs).
   const runtimes = await assessRuntimes(
@@ -607,6 +602,7 @@ export async function scanRepo(
       token,
       installationId: repo.installationId,
       isPrivate: meta.private,
+      ai: blocked ? null : await installationAi(repo.installationId),
       startedAt,
       blocked,
       onProviderChanges: (slugs) => fanOutProviderChanges(ctx, repoId, slugs),

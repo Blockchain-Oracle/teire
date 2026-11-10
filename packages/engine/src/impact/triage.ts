@@ -7,8 +7,8 @@ import type { PageReader } from "../catalog/adapters/vendor-page";
 import { sha256 } from "../catalog/source";
 import { DISCOVERY } from "../constants";
 import type { CallSite, ChangeV2 } from "../contract";
+import { receiptOf, type StepReceipt } from "../gateway";
 import type { RepoTree } from "../inventory/tree";
-import { nemotronOptions, nemotronSampling, receiptFor } from "../llm";
 import { type FindingDraft, priorityOf } from "./index";
 
 /**
@@ -19,16 +19,7 @@ import { type FindingDraft, priorityOf } from "./index";
  * exist in a file it was shown and must pass something to a model parameter. A "yes" that passes
  * makes the site decisive (resolution "traced"); anything else leaves it inconclusive for a human.
  */
-export interface TriageReceipt {
-  step: "triage";
-  model: string;
-  tokensIn: number;
-  tokensCached: number;
-  tokensOut: number;
-  costUsd: number;
-  ms: number;
-  cached: boolean;
-}
+export type TriageReceipt = StepReceipt<"triage"> & { cached: boolean };
 
 const answerSchema = z.object({
   sites: z.array(
@@ -156,30 +147,24 @@ export async function triageModelSites(input: {
       `Provider: ${provider?.name ?? slug}${provider?.via.length ? ` (the repo reaches it through ${provider.via.join(", ")})` : ""}.`,
       `Sites to decide:\n${sites.map(({ f, s }) => `- ${s.file}:${s.line} the string "${f.position.version}"`).join("\n")}`,
     ].join("\n\n");
-    const model = input.reader.tf.modelId("reader");
+    const model = input.reader.ai.modelId("reader");
     const promptHash = sha256(`${SYSTEM}\n${prompt}`);
     const started = Date.now();
     const compute = async () => {
       try {
         const result = await generateText({
-          model: input.reader.tf.model("reader"),
+          ...input.reader.ai.call("reader", { purpose: "triage" }),
           abortSignal: cancelSignal(),
           system: SYSTEM,
           prompt,
           output: Output.object({ schema: answerSchema }),
           maxOutputTokens: 12_000,
-          ...nemotronSampling,
-          // Tracing a value through files is reasoning work; the prompts are small.
-          providerOptions: nemotronOptions({ thinking: true }),
         });
-        const receipt = receiptFor(result.usage, input.reader.prices?.get(model));
+        const receipt = receiptOf(result);
         return { value: { sites: result.output.sites, receipt }, costUsd: receipt.costUsd };
       } catch (error) {
         if (!NoObjectGeneratedError.isInstance(error)) throw error;
-        const receipt = receiptFor(
-          error.usage ?? ({} as Parameters<typeof receiptFor>[0]),
-          input.reader.prices?.get(model),
-        );
+        const receipt = receiptOf({ usage: error.usage, response: error.response });
         return { value: { sites: [], receipt }, costUsd: receipt.costUsd };
       }
     };

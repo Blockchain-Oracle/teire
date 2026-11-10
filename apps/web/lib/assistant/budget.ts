@@ -1,6 +1,6 @@
 import { assistantCalls, eq, sql, systemState } from "@teire/db";
-import { ASSISTANT, DAILY_COST_CAP_DEFAULT_USD, FALLBACK_PRICES } from "@teire/engine/constants";
-import { fetchModelPrices, type ModelPrice } from "@teire/engine/llm";
+import { ASSISTANT, DAILY_COST_CAP_DEFAULT_USD } from "@teire/engine/constants";
+import type { GatewayReceipt } from "@teire/engine/gateway";
 import { database } from "../db";
 
 /**
@@ -8,7 +8,8 @@ import { database } from "../db";
  * runs, so chatting never stops a fix (`modelWorkBlocked` reads only `llm_calls`). A reply is
  * reserved at an estimate before the model runs, under one lock, so concurrent questions can't all
  * pass a cap that only one of them fits under; the receipt then replaces the estimate with the cost.
- * Token Factory's credit state and the overall daily cap (fixes and chat together) also stop it.
+ * An empty Otari balance and the overall daily cap (fixes and chat together) also stop it. Each
+ * reply's cost is Otari's own (`usage.cost_usd`), with the model and provider that answered.
  */
 const DAY = sql`now() - interval '24 hours'`;
 
@@ -30,7 +31,7 @@ export async function reserve(input: {
   const who = input.userId ?? "operator";
   const [credits] = await db.select().from(systemState).where(eq(systemState.key, "credits")).limit(1);
   if ((credits?.value as { exhausted?: boolean } | undefined)?.exhausted)
-    return { blocked: "Token Factory credits are used up for now, so Nemotron can't answer." };
+    return { blocked: "Teire's Otari balance is used up for now, so Ask Teire can't answer." };
   return db.transaction(async (tx) => {
     await tx.execute(sql`select pg_advisory_xact_lock(hashtext('teire:assistant-budget'))`);
     const [spent] = (
@@ -82,7 +83,8 @@ export async function settle(
     costUsd: number;
     latencyMs: number;
     failed?: boolean;
-  },
+    endUser?: string | null;
+  } & Partial<GatewayReceipt>,
 ) {
   await database()
     .update(assistantCalls)
@@ -94,25 +96,15 @@ export async function settle(
       costUsd: receipt.costUsd.toFixed(6),
       latencyMs: receipt.latencyMs,
       status: receipt.failed ? "failed" : "done",
+      endUser: receipt.endUser ?? null,
+      requestId: receipt.requestId ?? null,
+      servedModel: receipt.servedModel ?? null,
+      provider: receipt.provider ?? null,
+      fallback: receipt.fallback ?? false,
+      toolCalls: receipt.toolCalls ?? [],
+      guardrails: receipt.guardrails ?? [],
     })
     .where(eq(assistantCalls.id, id));
-}
-
-/** Token Factory's public prices, read once an hour per function instance. */
-let prices: { at: number; map: Map<string, ModelPrice> } | null = null;
-
-export async function priceOf(model: string): Promise<ModelPrice> {
-  if (!prices || Date.now() - prices.at > 3_600_000) {
-    // A catalog that can't be read isn't cached as empty: the next reply asks again.
-    const map = await fetchModelPrices().catch(() => null);
-    if (map?.size) prices = { at: Date.now(), map };
-  }
-  // Never $0: without the catalog, the last known price, then the recorded fallback, then Ultra's.
-  return (
-    prices?.map.get(model) ??
-    FALLBACK_PRICES[model] ??
-    (FALLBACK_PRICES["nvidia/Nemotron-3-Ultra-550b-a55b"] as ModelPrice)
-  );
 }
 
 /** This person's assistant spend: today's and the last 30 days' (Settings › Usage, the usage tool). */

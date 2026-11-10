@@ -25,6 +25,7 @@ import {
   withToolchainFloors,
   withUsage,
 } from "@teire/engine/fix";
+import { BalanceExhaustedError, BudgetExceededError, isAllowanceRefusal } from "@teire/engine/gateway";
 import {
   branchFor,
   commitToBranch,
@@ -42,12 +43,6 @@ import {
 import type { FindingDraft } from "@teire/engine/impact";
 import type { JvmProject, PyProject, RepoTree, RubyProject, RustProject } from "@teire/engine/inventory";
 import { directoryTree, fetchRepoTarball, scopedTree } from "@teire/engine/inventory";
-import {
-  CreditsExhaustedError,
-  createTokenFactory,
-  fetchModelPrices,
-  tokenFactoryConfigFromEnv,
-} from "@teire/engine/llm";
 import {
   type AssessedProject,
   type Assessment,
@@ -98,6 +93,7 @@ import {
 } from "@teire/engine/verify";
 import { cachedSurfaceDiff, dependencyCacheFor, postgresRegistryCache } from "../caches";
 import { authorizedRegistries } from "../credentials";
+import { aiFor, installationAi } from "../gateway";
 import { markCreditsExhausted, modelWorkBlocked } from "../reliability";
 import { resolveForRepo } from "../resolver";
 import {
@@ -110,6 +106,7 @@ import {
   getRepo,
   getRun,
   holdsRun,
+  llmCallRow,
   openArtifacts,
   PAUSED_STEP,
   pendingFixJobs,
@@ -129,7 +126,7 @@ import {
 import { fixesOffReply, readOrgConfig } from "./commands";
 import { syncDashboard } from "./dashboard";
 import { pageReader, storedProviderChanges } from "./providers";
-import { requesterToken } from "./public";
+import { requesterAi, requesterToken } from "./public";
 import type { WorkerContext } from "./scan";
 
 /** A run deferred for credits or the daily budget tries again after this long. */
@@ -1514,8 +1511,7 @@ async function coMovedAssessed(
     // Its own release notes too (D-10), read like the lead's; a source that can't be read is said.
     notes.push(
       ...(await movedPackageNotes({
-        tf: common.tf,
-        ...(common.prices ? { prices: common.prices } : {}),
+        ai: common.ai,
         ecosystem: found.instance.ecosystem,
         name: m.name,
         from: pinned.from,
@@ -1563,7 +1559,7 @@ async function apiOutcome(
   } = await assessApiChanges(repoDir, tree, await repoInstances(repoDir, tree), {
     changes: storedProviderChanges(ctx.db),
     discover: { cache: postgresRegistryCache(ctx.db) },
-    triage: await pageReader(ctx.db),
+    triage: await pageReader(ctx.db, common.ai),
     openapi: {
       cache: postgresRegistryCache(ctx.db),
       githubToken: common.options.githubToken,
@@ -1979,29 +1975,11 @@ export async function fixRun(ctx: WorkerContext, runId: string) {
     );
     runConfig.ignore = [...new Set([...runConfig.ignore, ...((repo.ignores as string[] | null) ?? [])])];
     const tree = scopedTree(directoryTree(checkout.dir), runConfig);
-    const tf = createTokenFactory(tokenFactoryConfigFromEnv());
-    const prices = await fetchModelPrices().catch(() => undefined);
-    // D107: public repositories and dry runs verify on Token Factory Sandboxes; private ones on Cloudflare.
-    // Read again right before every upload to Token Factory (review R1, round 2): a repository made
-    // private during the run stops reaching it. Uploads that ask at the same moment share one read;
-    // no answer is reused once it has returned. Anything but a confirmed "public" is private.
-    let reading: Promise<boolean> | null = null;
-    const stillPublic = () => {
-      reading ??= githubRepoNow(owner, name, installation?.octokit ?? null, requester)
-        .then(async (r) => {
-          // The repository row follows too, so its run pages stop being public (review round 2).
-          if (r.isPrivate === true && !repo.isPrivate) await setRepo(db, repo.id, { isPrivate: true });
-          return r.isPrivate === false;
-        })
-        .finally(() => {
-          reading = null;
-        });
-      return reading;
-    };
-    const selected = await selectBackend(process.env, {
-      isPrivate: dry ? false : (privateNow ?? true),
-      stillPublic,
-    });
+    // Who pays on Otari: the installation for its own runs, the person who asked for a dry run.
+    const ai = dry
+      ? ((await requesterAi(db, run.requestedBy)) ?? (await aiFor(null)))
+      : await installationAi(repo.installationId);
+    const selected = await selectBackend(process.env);
     const { note } = selected;
     // Private registries this repo names that its installation has a credential for (S18.7): for
     // version lookups, the updater's proxy, and the sandbox's egress during installs.
@@ -2028,8 +2006,7 @@ export async function fixRun(ctx: WorkerContext, runId: string) {
     const common: Common = {
       ...(extraNotes.length ? { extraNotes } : {}),
       ...(config?.verify?.length ? { verify: config.verify } : {}),
-      tf,
-      prices,
+      ai,
       backend,
       backendNote: note,
       runId,
@@ -2146,51 +2123,32 @@ export async function fixRun(ctx: WorkerContext, runId: string) {
     await holdLease();
     await db.transaction(async (tx) => {
       if (!(await holdsRun(tx, runId))) throw lost();
+      const paid = { repoId: repo.id, installationId: repo.installationId, endUser: ai.endUser?.id ?? null };
       if (notesReceipt)
-        await recordLlmCall(tx, {
-          runId,
-          purpose: "notes",
-          step: "notes",
-          model: notesReceipt.model,
-          tokensIn: notesReceipt.tokensIn,
-          tokensOut: notesReceipt.tokensOut,
-          costUsd: notesReceipt.costUsd.toFixed(6),
-          latencyMs: notesReceipt.ms,
-        });
+        await recordLlmCall(
+          tx,
+          llmCallRow(notesReceipt, { runId, purpose: "notes", step: "notes", ...paid }),
+        );
       for (const s of fix.agentSteps)
-        await recordLlmCall(tx, {
-          runId,
-          purpose: "fix",
-          step: s.tools.map((t) => t.name).join(",") || "answer",
-          model: s.model,
-          tokensIn: s.tokensIn,
-          tokensCached: s.tokensCached,
-          tokensOut: s.tokensOut,
-          costUsd: s.costUsd.toFixed(6),
-          latencyMs: s.ms,
-        });
+        await recordLlmCall(
+          tx,
+          llmCallRow(s, {
+            runId,
+            purpose: "fix",
+            step: s.tools.map((t) => t.name).join(",") || "answer",
+            ...paid,
+          }),
+        );
       if (fix.review)
-        await recordLlmCall(tx, {
-          runId,
-          purpose: "review",
-          step: "review",
-          model: fix.review.model,
-          tokensIn: fix.review.tokensIn,
-          tokensOut: fix.review.tokensOut,
-          costUsd: fix.review.costUsd.toFixed(6),
-          latencyMs: fix.review.ms,
-        });
+        await recordLlmCall(
+          tx,
+          llmCallRow(fix.review, { runId, purpose: "review", step: "review", ...paid }),
+        );
       if (fix.triage)
-        await recordLlmCall(tx, {
-          runId,
-          purpose: "review",
-          step: "install-triage",
-          model: fix.triage.model,
-          tokensIn: fix.triage.tokensIn,
-          tokensOut: fix.triage.tokensOut,
-          costUsd: fix.triage.costUsd.toFixed(6),
-          latencyMs: fix.triage.ms,
-        });
+        await recordLlmCall(
+          tx,
+          llmCallRow(fix.triage, { runId, purpose: "review", step: "install-triage", ...paid }),
+        );
       for (const [phase, side] of [
         ["baseline", fix.baseline],
         ["after", fix.after],
@@ -2605,17 +2563,30 @@ export async function fixRun(ctx: WorkerContext, runId: string) {
       }).catch(() => undefined);
       return { skipped: "lease lost" };
     }
-    if (error instanceof CreditsExhaustedError) {
-      // Not this run's fault: it waits, and every other run waits, until credits are back.
-      await markCreditsExhausted(db, error.message);
-      await update({
-        status: "queued",
-        step: "waiting for Token Factory credits",
-        error: error.message,
-        workerId: null,
+    if (isAllowanceRefusal(error)) {
+      // Not this run's fault, and nothing is lost: it waits and starts again by itself. An empty Otari
+      // balance pauses every run; a spent allowance waits for its own reset (Otari's Retry-After).
+      const balance = error instanceof BalanceExhaustedError;
+      if (balance) await markCreditsExhausted(db, error.message);
+      const waitSec =
+        error instanceof BudgetExceededError && error.retryAfterSec
+          ? error.retryAfterSec + 60
+          : BUDGET_RETRY_SECONDS;
+      const step = balance
+        ? "waiting for Otari credit"
+        : error instanceof BudgetExceededError && error.scope === "user"
+          ? dry
+            ? "waiting for your daily AI allowance"
+            : "waiting for this installation's AI allowance"
+          : "waiting for Teire's daily AI budget";
+      await update({ status: "queued", step, error: error.message, workerId: null });
+      await event("queue", "deferred", {
+        reason: error.message,
+        ...(error instanceof BudgetExceededError
+          ? { scope: error.scope, resetsAt: error.resetsAt()?.toISOString() ?? null }
+          : {}),
       });
-      await event("queue", "deferred", { reason: error.message });
-      await ctx.enqueueFix(runId, repo.id, BUDGET_RETRY_SECONDS);
+      await ctx.enqueueFix(runId, repo.id, waitSec);
       return { deferred: error.message };
     }
     if (error instanceof ResolverUnavailableError) {

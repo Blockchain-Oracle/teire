@@ -2,14 +2,14 @@ import { generateText, NoObjectGeneratedError, Output } from "ai";
 import { z } from "zod";
 import { cancelSignal } from "../../cancel";
 import { DISCOVERY } from "../../constants";
-import { type ModelPrice, nemotronOptions, nemotronSampling, receiptFor, type TokenFactory } from "../../llm";
+import { type Ai, receiptOf, type StepReceipt } from "../../gateway";
 import { quoteInSource } from "../../notes/extract";
 import { CATALOG_SCHEMA_VERSION, type ChangeKind, type ChangeRecord, changeId } from "../schema";
 import type { FetchedSource } from "../source";
 import { sha256 } from "../source";
 
 /**
- * A provider's own notice page with no hand-written reader (plan S04, D82): Nemotron 3 Ultra reads it
+ * A provider's own notice page with no hand-written reader (plan S04, D82): the reader model reads it
  * into one item per retired model, endpoint, parameter or API version, each with a verbatim quote.
  * Code then decides what stands (plan D40):
  *  - the quote must be in the page Teire fetched itself;
@@ -18,8 +18,8 @@ import { sha256 } from "../source";
  * The model only points; the page's own words are the record.
  */
 export interface PageReader {
-  tf: TokenFactory;
-  prices?: Map<string, ModelPrice>;
+  /** The gateway, bound to whoever this reading is for (Teire's shared catalog, or an installation's scan). */
+  ai: Ai;
   /** One reading per (model, prompt): the worker backs this with `extraction_cache`. */
   cached?: <T>(
     model: string,
@@ -28,16 +28,7 @@ export interface PageReader {
   ) => Promise<{ value: T; cached: boolean }>;
 }
 
-export interface ReaderReceipt {
-  step: "read-page";
-  model: string;
-  tokensIn: number;
-  tokensCached: number;
-  tokensOut: number;
-  costUsd: number;
-  ms: number;
-  cached: boolean;
-}
+export type ReaderReceipt = StepReceipt<"read-page"> & { cached: boolean };
 
 const itemSchema = z.object({
   kind: z.enum(["model-retirement", "endpoint-removal", "parameter-change", "api-version-sunset"]),
@@ -155,7 +146,7 @@ export async function readVendorPage(
   dropped: { item: PageItem; reason: string }[];
   receipts: ReaderReceipt[];
 }> {
-  const model = reader.tf.modelId("reader");
+  const model = reader.ai.modelId("reader");
   const records: ChangeRecord[] = [];
   const dropped: { item: PageItem; reason: string }[] = [];
   const receipts: ReaderReceipt[] = [];
@@ -167,24 +158,19 @@ export async function readVendorPage(
     const compute = async () => {
       try {
         const result = await generateText({
-          model: reader.tf.model("reader"),
+          ...reader.ai.call("reader", { purpose: "read-page" }),
           abortSignal: cancelSignal(),
           system: SYSTEM,
           prompt,
           output: Output.object({ schema: pageSchema }),
           maxOutputTokens: DISCOVERY.readerMaxOutputTokens,
-          ...nemotronSampling,
-          providerOptions: nemotronOptions({ thinking: false }),
         });
-        const receipt = receiptFor(result.usage, reader.prices?.get(model));
+        const receipt = receiptOf(result);
         return { value: { items: result.output.items, receipt }, costUsd: receipt.costUsd };
       } catch (error) {
         // An answer that does not parse is paid for and yields nothing (never a guess).
         if (!NoObjectGeneratedError.isInstance(error)) throw error;
-        const receipt = receiptFor(
-          error.usage ?? ({} as Parameters<typeof receiptFor>[0]),
-          reader.prices?.get(model),
-        );
+        const receipt = receiptOf({ usage: error.usage, response: error.response });
         return { value: { items: [] as PageItem[], receipt }, costUsd: receipt.costUsd };
       }
     };

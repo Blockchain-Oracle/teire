@@ -32,7 +32,6 @@ import { javaRequirement, jvmSurfaceDiff } from "../surface/jvm";
 import { jvmDocsLookup } from "../surface/jvmdoc";
 import { surfaceChangeRecords, unreadableDiff } from "../surface/records";
 import type { SurfaceDiff } from "../surface/types";
-import type { VerifyBackend } from "../verify/backend";
 import { withVerifyOverrides } from "../verify/commands";
 import { detectJvmChecks } from "../verify/jvm-commands";
 import { overBudget, type ScanProbeTarget, scanProbe } from "../verify/scan-probe";
@@ -406,19 +405,14 @@ export async function fixJvmDependency(
     });
   const docs = documentsForReading(sources);
   const extraction = docs.length
-    ? await extractNotes(
-        input.tf,
-        docs,
-        {
-          name: a.instance.name,
-          from,
-          to: target,
-          removedApis: (a.summary?.breaking ?? []).flatMap((f) =>
-            f.callSites.map((c) => c.snippet.trim().slice(0, 80)),
-          ),
-        },
-        input.prices,
-      )
+    ? await extractNotes(input.ai, docs, {
+        name: a.instance.name,
+        from,
+        to: target,
+        removedApis: (a.summary?.breaking ?? []).flatMap((f) =>
+          f.callSites.map((c) => c.snippet.trim().slice(0, 80)),
+        ),
+      })
     : null;
   const notes = extraction ? migrationNotes(extraction) : [];
   const behaviour = extraction
@@ -451,8 +445,7 @@ export async function fixJvmDependency(
   const run = await runFix({
     ...(renames.length ? { edits: renames } : {}),
     verify: input.verify,
-    tf: input.tf,
-    prices: input.prices,
+    ai: input.ai,
     backend: input.backend,
     runId: input.runId,
     repoDir: input.repoDir,

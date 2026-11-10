@@ -1,13 +1,13 @@
 import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { join, normalize, sep } from "node:path";
-import { APICallError, generateText, hasToolCall, isStepCount, tool } from "ai";
+import { generateText, hasToolCall, isStepCount, tool } from "ai";
 import { z } from "zod";
 import { cancelSignal, RunCancelledError } from "../cancel";
 import { FIX } from "../constants";
-import { type ModelPrice, nemotronOptions, nemotronSampling, receiptFor, type TokenFactory } from "../llm";
+import { type Ai, type GatewayReceipt, receiptOf } from "../gateway";
 
 /**
- * The fix agent (card C4 step 5): Nemotron 3 Ultra with six tools over the worker's working copy.
+ * The fix agent (card C4 step 5): the fixer model, through Otari, with six tools over the worker's working copy.
  * It edits only files the findings located or the compiler names; it never touches manifests,
  * lockfiles, CI or config (the upgrade transaction owns those); `run_check` writes the edits into
  * the after sandbox and runs the repo's own checks with the network off. Tool output is fenced as
@@ -29,21 +29,18 @@ export interface AgentWorkspace {
   requestUpgrade?: (name: string, version: string, why: string) => Promise<string>;
 }
 
-export interface AgentStep {
+export type AgentStep = GatewayReceipt & {
   model: string;
   /** The fix attempt this step belongs to (set by the run). */
   attempt?: number;
   tools: { name: string; input: unknown }[];
   text: string;
-  tokensIn: number;
-  tokensCached: number;
-  tokensOut: number;
-  costUsd: number;
   ms: number;
-}
+};
 
 export interface AgentResult {
   model: string;
+  /** Otari answered some step from a fallback offering (another host, or the policy's next model). */
   failover: boolean;
   finished: boolean;
   summary: string;
@@ -224,33 +221,32 @@ export function agentTools(ws: AgentWorkspace) {
 }
 
 export async function runAgent(input: {
-  tf: TokenFactory;
+  ai: Ai;
   system: string;
   prompt: string;
   workspace: AgentWorkspace;
-  prices?: Map<string, ModelPrice>;
   onStep?: (step: AgentStep) => void;
 }): Promise<AgentResult> {
-  const attempt = async (role: "agent" | "failover"): Promise<AgentResult> => {
-    const model = input.tf.modelId(role);
-    const steps: AgentStep[] = [];
-    let last = Date.now();
+  // One loop on the fixer role: Otari falls back across the model's hosts (and, with a routing
+  // policy, to the next model) inside each request, so Teire keeps no failover of its own.
+  const model = input.ai.modelId("fixer");
+  const steps: AgentStep[] = [];
+  let last = Date.now();
+  try {
     const result = await generateText({
-      model: input.tf.model(role),
+      ...input.ai.call("fixer", { purpose: "fix" }),
       abortSignal: cancelSignal(),
       system: input.system,
       prompt: input.prompt,
       tools: agentTools(input.workspace),
       stopWhen: [isStepCount(FIX.maxAgentSteps), hasToolCall("finish")],
       maxOutputTokens: FIX.maxOutputTokens,
-      ...nemotronSampling,
-      providerOptions: nemotronOptions({ thinking: true, coding: true }),
       onStepFinish: (step) => {
         const s: AgentStep = {
+          ...receiptOf(step),
           model,
           tools: step.toolCalls.map((c) => ({ name: c.toolName, input: c.input })),
           text: step.text.slice(0, 2000),
-          ...receiptFor(step.usage, input.prices?.get(model)),
           ms: Date.now() - last,
         };
         last = Date.now();
@@ -261,25 +257,15 @@ export async function runAgent(input: {
     const finish = result.steps.flatMap((s) => s.toolCalls).find((c) => c.toolName === "finish");
     return {
       model,
-      failover: role === "failover",
+      failover: steps.some((s) => s.fallback),
       finished: !!finish,
       summary: finish
         ? String((finish.input as { summary?: string }).summary ?? "")
         : result.text.slice(0, 2000),
       steps,
     };
-  };
-  try {
-    return await attempt("agent");
   } catch (error) {
-    // A cancelled run stops here; an aborted request is not an outage to fail over from.
     if (cancelSignal()?.aborted) throw new RunCancelledError();
-    // Ultra unavailable (5xx, 429, network): 3.5 Super continues from the same working copy.
-    const retryable =
-      (APICallError.isInstance(error) &&
-        (error.statusCode === undefined || error.statusCode >= 500 || error.statusCode === 429)) ||
-      (error instanceof Error && /fetch failed|ECONNRESET|ETIMEDOUT|timeout/i.test(error.message));
-    if (!retryable) throw error;
-    return attempt("failover");
+    throw error;
   }
 }

@@ -4,8 +4,8 @@ import { createDb, createLocalDb, runMigrations, sql, tlsOptions } from "@teire/
 import { runStateLabel } from "@teire/engine/actions";
 import { CONTRIBUTED } from "@teire/engine/catalog";
 import { RUNS } from "@teire/engine/constants";
+import { BalanceExhaustedError } from "@teire/engine/gateway";
 import { createGitHubApp, githubAppConfigFromEnv } from "@teire/engine/github";
-import { CreditsExhaustedError } from "@teire/engine/llm";
 import { PgBoss } from "pg-boss";
 import { syncDashboard } from "./jobs/dashboard";
 import { handleDelivery, reconcileInstallation } from "./jobs/events";
@@ -198,7 +198,7 @@ async function main() {
               JSON.stringify(await scanRepo(ctx, job.data.repoId, job.data.trigger)),
             );
           } catch (error) {
-            if (error instanceof CreditsExhaustedError) await markCreditsExhausted(db, error.message);
+            if (error instanceof BalanceExhaustedError) await markCreditsExhausted(db, error.message);
             console.error("[scan] failed", job.data.repoId, error);
           }
         }
@@ -241,7 +241,7 @@ async function main() {
             JSON.stringify(await publicScan(ctx, job.data.publicScanId)),
           );
         } catch (error) {
-          if (error instanceof CreditsExhaustedError) await markCreditsExhausted(db, error.message);
+          if (error instanceof BalanceExhaustedError) await markCreditsExhausted(db, error.message);
           console.error("[public] failed", job.data.publicScanId, error);
         }
       }

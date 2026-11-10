@@ -3,7 +3,7 @@ import { DISCOVERY } from "../constants";
 import { guardedFetch } from "../net/fetch";
 import { linkScope, nameFromDomain } from "./domains";
 import type { SdkProfile } from "./sdk";
-import { type TavilyUsage, tavilySearch } from "./tavily";
+import { type WebUsage, webSearch } from "./web";
 
 /**
  * Finding a provider's own notice pages when Teire has no reader for it (plan S04, D82, research
@@ -13,7 +13,7 @@ import { type TavilyUsage, tavilySearch } from "./tavily";
  *   1. the provider's `llms.txt` (on `docs.<domain>`, the domain itself, or the host a docs link
  *      redirects to) lists its pages; links whose URL or title says deprecations, retirements or
  *      changelog are candidates;
- *   2. when that names no deprecations page, Tavily searches restricted to the allowlist
+ *   2. when that names no deprecations page, Otari's web search, restricted to the allowlist
  *      (`include_domains`, restrict mode) and nominates more.
  * Every candidate URL is checked again here (HTTPS, registrable domain on the allowlist), and the
  * page is later fetched by Teire itself, each redirect hop checked, before anything is read from it.
@@ -31,8 +31,8 @@ export interface ProviderCandidate {
 
 export interface Discovery {
   record: ProviderRecord | null;
-  /** Tavily calls made (none when llms.txt was enough, or the result came from the cache). */
-  usage: TavilyUsage[];
+  /** Web searches and fetches made (none when llms.txt was enough, or the result came from the cache). */
+  usage: WebUsage[];
   /** Why no page was found, for the scan log. */
   note?: string;
   /** The search itself failed: nothing is cached, the next scan tries again. */
@@ -121,12 +121,12 @@ async function readLlmsTxt(host: string, domains: string[]) {
 
 export async function discoverProvider(candidate: ProviderCandidate, now = new Date()): Promise<Discovery> {
   const { domains, repos } = allowlistOf(candidate);
-  const usage: TavilyUsage[] = [];
+  const usage: WebUsage[] = [];
   const found = new Map<
     string,
-    { url: string; title: string; score: number; via: "llms.txt" | "tavily" | "probe" }
+    { url: string; title: string; score: number; via: "llms.txt" | "search" | "probe" }
   >();
-  const add = (url: string, title: string, via: "llms.txt" | "tavily" | "probe") => {
+  const add = (url: string, title: string, via: "llms.txt" | "search" | "probe") => {
     const clean = url.replace(/#.*$/, "");
     const s = score(clean, title);
     if (s === 0 || !onAllowlist(clean, domains)) return;
@@ -158,15 +158,15 @@ export async function discoverProvider(candidate: ProviderCandidate, now = new D
     if (read.finalHost && !tried.has(read.finalHost) && read.finalHost !== host) queue.push(read.finalHost);
   }
 
-  // 2. Tavily, restricted to the allowlist, when llms.txt named no deprecations page.
+  // 2. Otari's web search, restricted to the allowlist, when llms.txt named no deprecations page.
   const displayName = name ?? nameFromDomain(candidate.domain);
   let query: string | undefined;
   if (![...found.values()].some((f) => f.score >= 5)) {
     query = `${displayName} API deprecations: retired models and endpoints, shutdown dates and replacements`;
     try {
-      const search = await tavilySearch(query, [...domains, ...repos]);
+      const search = await webSearch(query, [...domains, ...repos]);
       usage.push(search.usage);
-      for (const r of search.results) add(r.url, r.title, "tavily");
+      for (const r of search.results) add(r.url, r.title, "search");
     } catch (error) {
       if (!found.size)
         return {
@@ -232,7 +232,7 @@ export async function discoverProvider(candidate: ProviderCandidate, now = new D
       at: now.toISOString(),
       via: [...new Set(pages.map((p) => p.via))],
       ...(query ? { query } : {}),
-      tavilyCredits: usage.reduce((n, u) => n + u.credits, 0),
+      searches: usage.filter((u) => u.endpoint === "search").length,
       evidence: candidate.via,
     },
   });

@@ -16,10 +16,10 @@ import { createTwoFilesPatch } from "diff";
 import { cancelSignal, RunCancelledError } from "../cancel";
 import { FIX, PR_MODE_BY_EVIDENCE, VERIFY } from "../constants";
 import type { ChangeV2, DependencyInstance } from "../contract";
+import type { Ai } from "../gateway";
 import { forGitHub } from "../github/redact";
 import type { FindingDraft } from "../impact";
 import type { RepoTree } from "../inventory/tree";
-import type { ModelPrice, TokenFactory } from "../llm";
 import type { VerifyBackend, VerifySession } from "../verify/backend";
 import type { CheckPlan } from "../verify/commands";
 import { type CheckResult, decideEvidence, type Evidence, type SideResult } from "../verify/evidence";
@@ -32,7 +32,6 @@ import {
   projectOf,
 } from "../verify/projects";
 import { type Change, runChecks, runSide, type SideRun, type VerifyRun, verifyChange } from "../verify/run";
-import { RepositoryNotPublicError, TarballTooLargeError } from "../verify/tokenfactory";
 import { type AgentStep, filesNamed, runAgent } from "./agent";
 import { applyCodemods, type CodemodEdit, type MigrationNote, planCodemods } from "./codemods";
 import { upgradeRequester } from "./request-upgrade";
@@ -43,7 +42,7 @@ import type { ManifestEdit } from "./upgrade-js";
 /**
  * One fix run for one dependency and target (card C4 + C5, plan S02a task 9): the upgrade
  * transaction, the baseline once, the after side installed once and re-checked per round,
- * deterministic edits, then Nemotron 3 Ultra attempts that each end in a verification; after two
+ * deterministic edits, then the fixer model's attempts, each ending in a verification; after two
  * failed verifications the agent starts over from the evidence; the attempt cap returns
  * `exhausted` so the caller can fall back one major (D71).
  */
@@ -92,8 +91,7 @@ const clip = (text: string) =>
   text.length > EVENT_TEXT_CHARS ? `${text.slice(0, EVENT_TEXT_CHARS)}…` : text;
 
 export interface FixInput {
-  tf: TokenFactory;
-  prices?: Map<string, ModelPrice>;
+  ai: Ai;
   backend: VerifyBackend;
   runId: string;
   /** Worker-side working copy of the repo (edited in place). */
@@ -193,7 +191,7 @@ export interface FixRun {
   moved: NonNullable<Transaction["moved"]>;
   /** The repository's download cache this run restored or saved (R21.11), for the receipt. */
   depCache?: { note: string; restoredMs?: number; savedMs?: number };
-  /** Nemotron's reading of a failed after-side install (S15.5), when the upgrade broke the install. */
+  /** The reviewer's reading of a failed after-side install (S15.5), when the upgrade broke the install. */
   triage?: InstallTriage;
   /** Upstream commits between the versions (D-13), when the updater listed them. */
   upstream: Transaction["upstream"] | null;
@@ -531,23 +529,20 @@ export async function verifyProjects(input: {
         ...("change" in input.after ? { change: input.after.change } : { afterTarball: input.after.tarball }),
         ...(onLog ? { onLog } : {}),
       });
-    // A tarball over the cap or a repository no longer public is the answer already (review round 2);
-    // a person's cancel stops the run, it isn't a project that couldn't be checked.
+    // A person's cancel stops the run; it isn't a project that couldn't be checked. Anything else
+    // gets one more try before the project counts as not checked.
     let v: VerifyRun | null = null;
     let failure = "";
     try {
       v = await attempt();
     } catch (first) {
       if (first instanceof RunCancelledError) throw first;
-      if (first instanceof TarballTooLargeError || first instanceof RepositoryNotPublicError)
-        failure = String(first);
-      else
-        try {
-          v = await attempt();
-        } catch (error) {
-          if (error instanceof RunCancelledError) throw error;
-          failure = String(error);
-        }
+      try {
+        v = await attempt();
+      } catch (error) {
+        if (error instanceof RunCancelledError) throw error;
+        failure = String(error);
+      }
     }
     if (!v) {
       const reason = `couldn't be checked (${forGitHub(failure, 200)})`;
@@ -897,17 +892,16 @@ async function runLead(input: FixInput): Promise<FixRun> {
 
     if (!prepared.install.ok) {
       const evidence = decideEvidence(baseline, prepared);
-      // Every failed install gets Nemotron's reading of why (S15.5): a cause for the reasons when the
+      // Every failed install gets the reviewer's reading of why (S15.5): a cause for the reasons when the
       // upgrade broke an install that worked before; on the receipt either way, or why it couldn't run.
       const started = Date.now();
       triage = await triageInstall({
-        tf: input.tf,
-        prices: input.prices,
+        ai: input.ai,
         brief,
         output: prepared.install.output,
       }).catch(
         (error: unknown): InstallTriage => ({
-          model: input.tf.modelId("reader"),
+          model: input.ai.modelId("reviewer"),
           cause: "",
           kind: "other",
           tokensIn: 0,
@@ -1014,7 +1008,7 @@ async function runLead(input: FixInput): Promise<FixRun> {
       (error: unknown): Review => {
         if (error instanceof RunCancelledError || cancelSignal()?.aborted) throw new RunCancelledError();
         return {
-          model: input.tf.modelId("reader"),
+          model: input.ai.modelId("reviewer"),
           scope,
           problems: [],
           tokensIn: 0,
@@ -1029,8 +1023,7 @@ async function runLead(input: FixInput): Promise<FixRun> {
         (m) => m.name !== input.instance?.name,
       );
       const review = await reviewBump({
-        tf: input.tf,
-        prices: input.prices,
+        ai: input.ai,
         brief,
         notes: input.notes,
         moved: [
@@ -1071,8 +1064,7 @@ async function runLead(input: FixInput): Promise<FixRun> {
       const patch = codemods.length ? codePatch() : "";
       const review = patch
         ? await reviewFix({
-            tf: input.tf,
-            prices: input.prices,
+            ai: input.ai,
             brief,
             notes: input.notes,
             patch,
@@ -1174,10 +1166,9 @@ async function runLead(input: FixInput): Promise<FixRun> {
         .filter(Boolean)
         .join("\n\n");
       const agent = await runAgent({
-        tf: input.tf,
+        ai: input.ai,
         system: requestUpgrade ? `${SYSTEM}\n${UPGRADE_HINT}` : SYSTEM,
         prompt,
-        prices: input.prices,
         workspace: {
           repoDir: input.repoDir,
           root: input.project.root,
@@ -1262,8 +1253,7 @@ async function runLead(input: FixInput): Promise<FixRun> {
       summary = agent.summary || summary;
       if (acceptable(current.evidence)) {
         const review = await reviewFix({
-          tf: input.tf,
-          prices: input.prices,
+          ai: input.ai,
           brief,
           notes: input.notes,
           patch: codePatch(),

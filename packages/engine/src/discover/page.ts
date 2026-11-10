@@ -2,22 +2,22 @@ import type { FetchResult, PreviousFetch } from "../catalog/source";
 import { sha256 } from "../catalog/source";
 import { DISCOVERY } from "../constants";
 import { guardedFetch } from "../net/fetch";
-import { type TavilyUsage, tavilyExtract } from "./tavily";
+import { type WebUsage, webFetch } from "./web";
 
 /**
  * Fetching a discovered notice page (the URL a search or an llms.txt nominated). Teire reads its own
  * copy through the guarded fetch, restricted to the provider's allowlisted domains at every redirect:
  *   1. the page's markdown twin (`…/deprecations.md`, served by Mintlify, Fern and similar docs sites);
  *   2. the page itself, HTML reduced to text (table cells kept as `| a | b |` rows);
- *   3. only when the page's own HTML holds no text (rendered by script), Tavily extract.
+ *   3. only when the page's own HTML holds no text (rendered by script), Otari's web fetch.
  * Quotes are later checked against exactly this body.
  */
 export interface PageRead {
   result: FetchResult;
   /** The URL whose body was read (the markdown twin when it exists). */
   readUrl: string;
-  via: "markdown" | "html" | "tavily-extract";
-  usage?: TavilyUsage;
+  via: "markdown" | "html" | "web-fetch";
+  usage?: WebUsage;
 }
 
 const ENTITIES: Record<string, string> = {
@@ -101,14 +101,14 @@ export async function fetchDiscoveredPage(
     if (candidate === twin && !markdown) continue;
     let body = markdown ? res.text() : htmlToText(res.text());
     let via: PageRead["via"] = markdown ? "markdown" : "html";
-    let usage: TavilyUsage | undefined;
+    let usage: WebUsage | undefined;
     if (body.length < DISCOVERY.minPageChars && !markdown) {
       try {
-        const extracted = await tavilyExtract(url);
+        const extracted = await webFetch(url);
         usage = extracted.usage;
         if (extracted.content && extracted.content.length > body.length) {
           body = extracted.content;
-          via = "tavily-extract";
+          via = "web-fetch";
         }
       } catch (error) {
         lastError = error instanceof Error ? error.message : String(error);

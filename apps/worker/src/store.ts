@@ -28,6 +28,7 @@ import { sha256 } from "@teire/engine/catalog";
 import { effectiveFixMode, type TeireConfig } from "@teire/engine/config";
 import { WIDE_INSTALL } from "@teire/engine/constants";
 import { type ChangeV2, type Coverage, type DependencyInstance, lineageKey } from "@teire/engine/contract";
+import type { GatewayReceipt } from "@teire/engine/gateway";
 import type { FindingDraft } from "@teire/engine/impact";
 
 /** Everything the worker writes, in one place, each write idempotent. */
@@ -682,6 +683,54 @@ export async function holdsRun(db: Pick<Database, "execute">, runId: string) {
 
 export async function recordLlmCall(db: Pick<Database, "insert">, values: typeof llmCalls.$inferInsert) {
   await db.insert(llmCalls).values(values);
+}
+
+/** What any model call's receipt carries: Teire's own fields, and Otari's when the call went out. */
+type CallReceipt = {
+  model: string;
+  ms: number;
+  tokensIn: number;
+  tokensOut: number;
+  costUsd: number;
+  tokensCached?: number;
+} & Partial<GatewayReceipt>;
+
+/** A receipt as an `llm_calls` row (0028): the step and its time, who paid, and what Otari reported. */
+export function llmCallRow(
+  r: CallReceipt,
+  at: {
+    runId: string | null;
+    purpose: string;
+    step: string;
+    repoId?: number | null;
+    installationId?: number | null;
+    endUser?: string | null;
+    status?: "done" | "failed" | "cancelled";
+  },
+): typeof llmCalls.$inferInsert {
+  return {
+    runId: at.runId,
+    purpose: at.purpose,
+    step: at.step,
+    model: r.model,
+    tokensIn: r.tokensIn,
+    tokensCached: r.tokensCached ?? 0,
+    tokensOut: r.tokensOut,
+    costUsd: r.costUsd.toFixed(6),
+    latencyMs: r.ms,
+    repoId: at.repoId ?? null,
+    installationId: at.installationId ?? null,
+    endUser: at.endUser ?? null,
+    requestId: r.requestId ?? null,
+    servedModel: r.servedModel ?? null,
+    provider: r.provider ?? null,
+    fallback: r.fallback ?? false,
+    attempts: r.attempts ?? null,
+    pricingSource: r.pricingSource ?? null,
+    toolCalls: r.toolCalls ?? [],
+    guardrails: r.guardrails ?? [],
+    status: at.status ?? "done",
+  };
 }
 
 export async function recordSandboxExec(

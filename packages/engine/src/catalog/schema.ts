@@ -146,14 +146,14 @@ export const providerRecord = z.object({
   apiVersionHeader: z.string().optional(),
   /**
    * Set when Teire found this provider from a scanned repo instead of a curated record: when, how the
-   * pages were nominated (llms.txt, Tavily), and what in the repo pointed at it.
+   * pages were nominated (llms.txt, Otari's web search), and what in the repo pointed at it.
    */
   discovery: z
     .object({
       at: z.iso.datetime(),
-      via: z.array(z.enum(["llms.txt", "tavily", "probe", "teire.yml"])),
+      via: z.array(z.enum(["llms.txt", "search", "probe", "teire.yml"])),
       query: z.string().optional(),
-      tavilyCredits: z.number().min(0).default(0),
+      searches: z.number().min(0).default(0),
       evidence: z.array(z.string()).default([]),
     })
     .optional(),

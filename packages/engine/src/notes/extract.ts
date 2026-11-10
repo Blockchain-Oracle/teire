@@ -5,7 +5,7 @@ import { normalizeForQuote } from "../catalog/markdown";
 import { sha256 } from "../catalog/source";
 import { NOTES } from "../constants";
 import { type ChangeV2, changeV2, type Ecosystem } from "../contract";
-import { type ModelPrice, nemotronOptions, nemotronSampling, receiptFor, type TokenFactory } from "../llm";
+import { type Ai, receiptOf, type StepReceipt } from "../gateway";
 import type { NoteSource } from "./sources";
 
 /**
@@ -143,24 +143,15 @@ Rules: one item per distinct change (group many APIs changed the same way into o
 export interface ExtractionResult {
   items: (NoteItem & { source: NoteSource })[];
   dropped: { item: NoteItem; reason: string }[];
-  receipt: {
-    step: "notes";
-    model: string;
-    tokensIn: number;
-    tokensCached: number;
-    tokensOut: number;
-    costUsd: number;
-    ms: number;
-  };
+  receipt: StepReceipt<"notes">;
   promptHash: string;
   error?: string;
 }
 
 export async function extractNotes(
-  tf: TokenFactory,
+  ai: Ai,
   docs: NoteDocument[],
   context: { name: string; from: string; to: string; removedApis: string[] },
-  prices?: Map<string, ModelPrice>,
 ): Promise<ExtractionResult> {
   const started = Date.now();
   // Static instructions first, documents next, the per-run question last: prefix caching works.
@@ -174,24 +165,22 @@ export async function extractNotes(
     .filter(Boolean)
     .join("\n\n");
   const promptHash = sha256(`${SYSTEM}\n${prompt}`);
-  const modelId = tf.modelId("reader");
+  const modelId = ai.modelId("reader");
   const items: ExtractionResult["items"] = [];
   const dropped: ExtractionResult["dropped"] = [];
   let output: z.infer<typeof extractionSchema>;
-  let usage: Parameters<typeof receiptFor>[0];
+  let answered: Parameters<typeof receiptOf>[0];
   try {
     const result = await generateText({
-      model: tf.model("reader"),
+      ...ai.call("reader", { purpose: "notes" }),
       abortSignal: cancelSignal(),
       system: SYSTEM,
       prompt,
       output: Output.object({ schema: extractionSchema }),
       maxOutputTokens: NOTES.maxOutputTokens,
-      ...nemotronSampling,
-      providerOptions: nemotronOptions({ thinking: false }),
     });
     output = result.output;
-    usage = result.usage;
+    answered = result;
   } catch (error) {
     // An answer that does not parse is recorded, paid for, and yields nothing (never a guess).
     if (!NoObjectGeneratedError.isInstance(error)) throw error;
@@ -203,7 +192,7 @@ export async function extractNotes(
       receipt: {
         step: "notes",
         model: modelId,
-        ...receiptFor(error.usage ?? ({} as Parameters<typeof receiptFor>[0]), prices?.get(modelId)),
+        ...receiptOf({ usage: error.usage, response: error.response }),
         ms: Date.now() - started,
       },
     };
@@ -241,7 +230,7 @@ export async function extractNotes(
     receipt: {
       step: "notes",
       model: modelId,
-      ...receiptFor(usage, prices?.get(modelId)),
+      ...receiptOf(answered),
       ms: Date.now() - started,
     },
   };

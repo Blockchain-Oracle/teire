@@ -1,6 +1,6 @@
 import type { Ecosystem } from "../contract";
 import type { MigrationNote } from "../fix/codemods";
-import type { ModelPrice, TokenFactory } from "../llm";
+import type { Ai } from "../gateway";
 import { documentsForReading, extractNotes, migrationNotes } from "../notes/extract";
 import {
   gatherCargoNotes,
@@ -23,12 +23,11 @@ const GATHER: Record<Ecosystem, typeof gatherNpmNotes> = {
 
 /**
  * A moved package's own release notes (D-10), read like the lead's: its slice from the version it
- * had to the one the updater moved it to, by Nemotron 3 Ultra behind the quote gate. Each note
+ * had to the one the updater moved it to, by the reader model behind the quote gate. Each note
  * names its package, so the agent doesn't take a note about `http` for one about `reqwest`.
  */
 export async function movedPackageNotes(input: {
-  tf: TokenFactory;
-  prices?: Map<string, ModelPrice>;
+  ai: Ai;
   ecosystem: Ecosystem;
   name: string;
   from: string;
@@ -40,12 +39,12 @@ export async function movedPackageNotes(input: {
   const { sources } = await GATHER[input.ecosystem](input.name, input.from, input.to, input.options);
   const docs = documentsForReading(sources);
   if (!docs.length) return [];
-  const extraction = await extractNotes(
-    input.tf,
-    docs,
-    { name: input.name, from: input.from, to: input.to, removedApis: input.removedApis },
-    input.prices,
-  );
+  const extraction = await extractNotes(input.ai, docs, {
+    name: input.name,
+    from: input.from,
+    to: input.to,
+    removedApis: input.removedApis,
+  });
   return migrationNotes(extraction).map((n) => ({
     ...n,
     summary: `${input.name} ${input.from} → ${input.to}: ${n.summary}`,

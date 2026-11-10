@@ -13,11 +13,11 @@ import { directoryTree, fetchRepoTarball, scopedTree } from "../src/inventory";
 const treeOf = (dir: string, sub: string) =>
   sub ? scopedTree(directoryTree(dir), { paths: [`${sub}/**`], ignorePaths: [] }) : directoryTree(dir);
 
+import { createGateway, gatewayConfigFromEnv } from "../src/gateway";
 import type { JvmProject } from "../src/inventory/jvm";
 import type { PyProject } from "../src/inventory/python";
 import type { RubyProject } from "../src/inventory/ruby";
 import type { RustProject } from "../src/inventory/rust";
-import { createTokenFactory, fetchModelPrices, tokenFactoryConfigFromEnv } from "../src/llm";
 import {
   type Assessment,
   assessApiChanges,
@@ -113,22 +113,13 @@ const flag = (name: string) => args.find((a) => a.startsWith(`--${name}=`))?.sli
 const out = flag("out");
 if (!out) throw new Error("--out=<file> is required");
 const only = flag("case");
-const models = (flag("models") ?? "ultra,super").split(",");
-
-const env = tokenFactoryConfigFromEnv();
-const prices = await fetchModelPrices();
-// --backend=tokenfactory verifies on Token Factory Sandboxes, as a public repository's run does.
-const onTokenFactory = args.includes("--backend=tokenfactory");
-const { backend, note } = await selectBackend(
-  onTokenFactory
-    ? {
-        ...process.env,
-        TEIRE_SANDBOX_IMAGES:
-          process.env.TEIRE_SANDBOX_IMAGES ?? `${import.meta.dirname}/../../../apps/sandbox/images`,
-      }
-    : process.env,
-  onTokenFactory ? { isPrivate: false } : undefined,
-);
+const env = gatewayConfigFromEnv();
+// Fixer models to compare, by Otari id (`--models=z-ai/glm-5.3,moonshotai/kimi-k2.6`); the role's own by default.
+const models = (flag("models") ?? env.models.fixer).split(",");
+const fixerFor = (model: string) =>
+  createGateway({ ...env, models: { ...env.models, fixer: model } }).as(null);
+const slug = (model: string) => model.replace(/[^\w.-]+/g, "-");
+const { backend, note } = await selectBackend(process.env);
 const counts = (side: SideResult) =>
   side.checks.map((k) => ({
     name: k.name,
@@ -197,16 +188,11 @@ for (const c of CASES.filter((x) => !wanted.length || wanted.some((w) => x.slug.
       `\n# ${c.slug} ${assessment.package} ${assessment.from} → ${assessment.to}: ${assessment.verdict} (expected ${c.expect}), ${assessment.sites.length} site(s)`,
     );
     // A clean repo is fixed once (a plain bump); the agent has nothing to do, so no model comparison.
-    for (const m of c.expect === "affected" ? models : ["ultra"]) {
-      const agentModel = m === "super" ? env.models.failover : env.models.agent;
-      const tf = createTokenFactory({
-        ...env,
-        models: { ...env.models, agent: agentModel, failover: env.models.failover },
-      });
-      const runId = `eval-${repo}-${m}-${Date.now().toString(36)}`;
+    for (const m of c.expect === "affected" ? models : models.slice(0, 1)) {
+      const ai = await fixerFor(m);
+      const runId = `eval-${repo}-${slug(m)}-${Date.now().toString(36)}`;
       const common = {
-        tf,
-        prices,
+        ai,
         backend,
         backendNote: note,
         runId,
@@ -244,7 +230,7 @@ for (const c of CASES.filter((x) => !wanted.length || wanted.some((w) => x.slug.
         const record = {
           ...assessment,
           agent: m,
-          agentModel,
+          agentModel: m,
           evidence: run.evidence.kind,
           prMode: run.evidence.prMode,
           reasons: run.evidence.reasons,
@@ -286,7 +272,7 @@ for (const c of CASES.filter((x) => !wanted.length || wanted.some((w) => x.slug.
       } catch (error) {
         appendFileSync(
           out,
-          `${JSON.stringify({ ...assessment, agent: m, agentModel, error: String(error).slice(0, 2000), ms: Date.now() - started })}\n`,
+          `${JSON.stringify({ ...assessment, agent: m, agentModel: m, error: String(error).slice(0, 2000), ms: Date.now() - started })}\n`,
         );
         console.log(`  => ${m}: error ${String(error).slice(0, 300)}`);
       }
@@ -298,9 +284,9 @@ for (const c of CASES.filter((x) => !wanted.length || wanted.some((w) => x.slug.
   }
 }
 
-// Provider sources are read live, only for the providers each repo talks to; the same Nemotron
-// reader traces wrapped model IDs, as the worker's scan does.
-const reader = { tf: createTokenFactory(tokenFactoryConfigFromEnv()), prices: await fetchModelPrices() };
+// Provider sources are read live, only for the providers each repo talks to; the same reader model
+// traces wrapped model IDs, as the worker's scan does.
+const reader = { ai: await createGateway(env).as(null) };
 const providerChanges = liveProviderChanges({ reader });
 for (const c of API_CASES.filter((x) => !wanted.length || wanted.some((w) => x.slug.endsWith(w)))) {
   const [owner = "", repo = "", ...rest] = c.slug.split("/");
@@ -339,17 +325,15 @@ for (const c of API_CASES.filter((x) => !wanted.length || wanted.some((w) => x.s
     console.log(`\n# ${c.slug} ${c.group}: ${assessment.verdict}, ${assessment.sites.length} site(s)`);
     const provider = catalog.find((r) => r.id === group[0]?.changeId)?.subject.provider;
     for (const m of models) {
-      const agentModel = m === "super" ? env.models.failover : env.models.agent;
-      const tf = createTokenFactory({ ...env, models: { ...env.models, agent: agentModel } });
+      const ai = await fixerFor(m);
       const started = Date.now();
       try {
         const fresh = await fetchRepoTarball(owner, repo, "main", token);
         const result = await fixApiChanges({
-          tf,
-          prices,
+          ai,
           backend,
           backendNote: note,
-          runId: `eval-${sub || repo}-${m}-${Date.now().toString(36)}`,
+          runId: `eval-${sub || repo}-${slug(m)}-${Date.now().toString(36)}`,
           repoDir: fresh.dir,
           tree: treeOf(fresh.dir, sub),
           repo: { owner, repo, baseSha: fresh.sha ?? "main" },
@@ -365,7 +349,7 @@ for (const c of API_CASES.filter((x) => !wanted.length || wanted.some((w) => x.s
         const record = {
           ...assessment,
           agent: m,
-          agentModel,
+          agentModel: m,
           evidence: run.evidence.kind,
           prMode: run.evidence.prMode,
           reasons: run.evidence.reasons,
@@ -404,7 +388,7 @@ for (const c of API_CASES.filter((x) => !wanted.length || wanted.some((w) => x.s
       } catch (error) {
         appendFileSync(
           out,
-          `${JSON.stringify({ ...assessment, agent: m, agentModel, error: String(error).slice(0, 2000), ms: Date.now() - started })}\n`,
+          `${JSON.stringify({ ...assessment, agent: m, agentModel: m, error: String(error).slice(0, 2000), ms: Date.now() - started })}\n`,
         );
         console.log(`  => ${m}: error ${String(error).slice(0, 300)}`);
       }

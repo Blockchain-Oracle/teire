@@ -7,7 +7,7 @@
  */
 import { ingestProvider, PROVIDERS } from "../src/catalog";
 import { discoverProviders, providerCandidates } from "../src/discover";
-import { createTokenFactory, fetchModelPrices, tokenFactoryConfigFromEnv } from "../src/llm";
+import { createGateway } from "../src/gateway";
 import { memoryCache } from "../src/registry";
 
 const args = process.argv.slice(2);
@@ -40,10 +40,10 @@ for (const c of candidates)
   );
 
 const found = await discoverProviders(candidates, options);
-for (const u of found.usage) console.log(`tavily ${u.endpoint}: ${u.credits} credit(s), ${u.ms} ms`);
+for (const u of found.usage) console.log(`otari ${u.endpoint}: ${u.requestId ?? "-"}, ${u.ms} ms`);
 for (const n of found.notes) console.log(`note ${n}`);
 
-const reader = { tf: createTokenFactory(tokenFactoryConfigFromEnv()), prices: await fetchModelPrices() };
+const reader = { ai: await createGateway().as(null) };
 for (const { provider, via } of found.used) {
   console.log(
     `\n## ${provider.name} (${provider.slug}) via ${via.join(", ")}; official: ${provider.officialDomains.join(", ")}`,
@@ -57,7 +57,7 @@ for (const { provider, via } of found.used) {
     console.log(
       `   read ${r.model}: ${r.tokensIn} in / ${r.tokensOut} out, $${r.costUsd.toFixed(4)}, ${r.ms} ms`,
     );
-  for (const t of run.tavily) console.log(`   tavily ${t.endpoint}: ${t.credits} credit(s)`);
+  for (const t of run.web) console.log(`   otari ${t.endpoint}: ${t.requestId ?? "-"}`);
   const confirmed = run.records.filter((r) => r.status === "confirmed");
   console.log(
     `   ${run.records.length} records (${confirmed.length} confirmed) in ${Math.round((Date.now() - started) / 1000)} s`,

@@ -383,19 +383,14 @@ export async function fixGoDependency(
   } else if (declared.note) input.onEvent?.({ step: "transaction", detail: declared.note });
   const docs = documentsForReading(sources);
   const extraction = docs.length
-    ? await extractNotes(
-        input.tf,
-        docs,
-        {
-          name: targetPath,
-          from,
-          to: target,
-          removedApis: (a.summary?.breaking ?? []).flatMap((f) =>
-            f.callSites.map((c) => c.snippet.trim().slice(0, 80)),
-          ),
-        },
-        input.prices,
-      )
+    ? await extractNotes(input.ai, docs, {
+        name: targetPath,
+        from,
+        to: target,
+        removedApis: (a.summary?.breaking ?? []).flatMap((f) =>
+          f.callSites.map((c) => c.snippet.trim().slice(0, 80)),
+        ),
+      })
     : null;
   const notes = extraction ? migrationNotes(extraction) : [];
   const behaviour = extraction
@@ -450,8 +445,7 @@ export async function fixGoDependency(
       });
     },
     verify: input.verify,
-    tf: input.tf,
-    prices: input.prices,
+    ai: input.ai,
     backend: input.backend,
     runId: input.runId,
     repoDir: input.repoDir,

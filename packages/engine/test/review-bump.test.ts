@@ -1,14 +1,15 @@
 import { MockLanguageModelV4 } from "ai/test";
 import { describe, expect, it } from "vitest";
 import { reviewBump } from "../src/fix/review";
-import type { TokenFactory } from "../src/llm";
+import type { Ai } from "../src/gateway";
 
 const usage = {
   inputTokens: { total: 900, noCache: 900, cacheRead: 0, cacheWrite: 0 },
   outputTokens: { total: 60, text: 60, reasoning: 0 },
 };
 
-function tokenFactory(answer: unknown, prompts: string[]) {
+/** A gateway client whose reviewer is a mock model (the call's Otari fields are not under test here). */
+function gateway(answer: unknown, prompts: string[]) {
   const model = new MockLanguageModelV4({
     doGenerate: async (options) => {
       prompts.push(JSON.stringify(options.prompt));
@@ -21,15 +22,16 @@ function tokenFactory(answer: unknown, prompts: string[]) {
     },
   });
   return {
-    model: () => model,
-    modelId: () => "nvidia/Nemotron-3-Ultra-550b-a55b",
-  } as unknown as TokenFactory;
+    endUser: null,
+    modelId: () => "deepseek/deepseek-v4-pro-0813",
+    call: () => ({ model, providerOptions: { otari: {} } }),
+  } as unknown as Ai;
 }
 
 describe("the short review on a run with no code edits (S15.5)", () => {
   it("reads what moved, the quoted notes and the checks, and lists concerns against the manifest", async () => {
     const prompts: string[] = [];
-    const tf = tokenFactory(
+    const ai = gateway(
       {
         concerns: [
           { source: "note: requests 3.0", concern: "The default timeout changed from none to 30 seconds." },
@@ -38,7 +40,7 @@ describe("the short review on a run with no code edits (S15.5)", () => {
       prompts,
     );
     const review = await reviewBump({
-      tf,
+      ai,
       brief: "Upgrade requests 2.32.3 → 3.0.0",
       notes: [
         {
@@ -68,7 +70,7 @@ describe("the short review on a run with no code edits (S15.5)", () => {
   it("says when no notes were found, and returns no concerns when there are none", async () => {
     const prompts: string[] = [];
     const review = await reviewBump({
-      tf: tokenFactory({ concerns: [] }, prompts),
+      ai: gateway({ concerns: [] }, prompts),
       brief: "Upgrade itoa 1.0.10 → 1.0.14",
       notes: [],
       moved: "Cargo.lock: +2/−2 lines",

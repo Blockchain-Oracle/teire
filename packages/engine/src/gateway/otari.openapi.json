@@ -1,0 +1,1775 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "otari",
+    "description": "Pruned by scripts/otari-openapi.mjs from https://api.otari.ai/api/v1/openapi.json",
+    "version": "0.42.0+259b65d"
+  },
+  "paths": {
+    "/api/v1/search": {
+      "post": {
+        "tags": ["search"],
+        "summary": "Create Search",
+        "description": "Run a search against a configured search tool.\n\nThe tool is taken from ``search_tool_name``, which may be omitted when the\ndeployment's ``web_search_default_tool`` names one, or when exactly one\ntool is configured. Such a call runs on the workspace's organization search\nkey when it has one.\n\nAuthentication modes:\n- Master key: the ``user`` field is required and may name any existing user.\n- API key: usage and spend bind to the key's own user. A ``user`` field\n  naming a different user is rejected with 403 (or ignored, when the key's\n  own ``reject_user_mismatch`` is false, or the deployment-wide setting is\n  disabled and the key does not override it); it is never billed to that\n  user.\n- Service key: a ``user`` field names one of the key owner's end users,\n  created on first use on the budget ``Otari-End-User-Budget`` names (or\n  the key's default), and is billed and rate limited as that end user, as\n  on chat completions.",
+        "operationId": "search-create_search",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SearchRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "XApiKeyAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/fetch": {
+      "post": {
+        "tags": ["fetch"],
+        "summary": "Create Fetch",
+        "description": "Fetch one page through a configured fetch tool.\n\nThe tool is taken from ``fetch_tool_name``, which may be omitted: the\ndeployment's ``web_fetch_default_tool`` then serves, else ``builtin_fetch``,\nthe gateway's own fetcher. Such a call runs on the workspace's organization\nfetch key when it has one. While the deployment's ``web_fetch_enabled`` is\noff, the call is refused, as ``otari_web_fetch`` is. The URL must pass the\nworkspace's domain lists and the gateway's own checks: a public http or\nhttps URL that names no private address. The built-in fetcher also checks\nwhere each host resolves.\n\nAuthentication modes:\n- Master key: the ``user`` field is required and may name any existing user.\n- API key: usage and spend bind to the key's own user. A ``user`` field\n  naming a different user is rejected with 403 (or ignored, when the key's\n  own ``reject_user_mismatch`` is false, or the deployment-wide setting is\n  disabled and the key does not override it); it is never billed to that\n  user.\n- Service key: a ``user`` field names one of the key owner's end users,\n  created on first use on the budget ``Otari-End-User-Budget`` names (or\n  the key's default), and is billed and rate limited as that end user, as\n  on chat completions.",
+        "operationId": "fetch-create_fetch",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FetchRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FetchResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "XApiKeyAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/code/execute": {
+      "post": {
+        "tags": ["code-execution"],
+        "summary": "Execute Code",
+        "description": "Run code in the gateway's sandbox and return its output.\n\nThe run is admitted as an ``otari_code_execution`` call is: a workspace whose\ncode execution policy is off is refused, and its execution ceiling and pinned\nimage apply. It is priced under ``otari:code_execution`` and reserved against\nthe caller's budgets. ``file_ids`` puts uploads in the working directory, and\neach file the code writes comes back with a ``file_id``. ``container: \"auto\"``\nholds the sandbox after the run and names it in ``Otari-Container-Id``;\nsending that id back runs in the same sandbox, with its files and\ninterpreter state.\n\nAuthentication modes:\n- Master key: the ``user`` field is required and may name any existing user.\n- API key: usage and spend bind to the key's own user. A ``user`` field\n  naming a different user is rejected with 403 (or ignored, when the key's\n  own ``reject_user_mismatch`` is false, or the deployment-wide setting is\n  disabled and the key does not override it); it is never billed to that\n  user.\n- Service key: a ``user`` field names one of the key owner's end users,\n  created on first use on the budget ``Otari-End-User-Budget`` names (or\n  the key's default), and is billed and rate limited as that end user.",
+        "operationId": "code-execution-execute_code",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CodeExecuteRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CodeExecuteResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "XApiKeyAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/tools": {
+      "get": {
+        "tags": ["tools"],
+        "summary": "List Tools",
+        "description": "List the tools Otari runs itself, with the declaration forms it accepts.\n\nCalled with an API key, a tool its workspace does not allow is listed as\nunavailable. Every other `tools[]` entry, including provider-native keywords\nnot listed here, is forwarded to the upstream provider untouched.",
+        "operationId": "tools-list_tools",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ToolsResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "XApiKeyAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/key/budget": {
+      "get": {
+        "tags": ["key"],
+        "summary": "Get Key Budget",
+        "description": "What the calling key may still spend, and every cap that decides it.\n\nLists the budget the key's user is on and each spend ceiling on a scope the\nkey bills to (the key itself, its user's memberships, its workspace and its\norganization), as the budget gate counts them: recorded use plus the holds of\nrequests in flight. A period that has ended reads as the fresh one the next\nrequest starts. ``remaining_usd`` is the least any cap on every provider\nleaves, which is what a request can still spend before a 403. Caps shared with\nthe rest of the workspace or organization report only what they leave.",
+        "operationId": "key-get_key_budget",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KeyBudgetPublic"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "XApiKeyAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/end-users": {
+      "get": {
+        "tags": ["end-users"],
+        "summary": "List End Users",
+        "description": "List the end users of the calling service key, oldest first.\n\nRequires a service key. End users belong to the key's user, so every service key of one user lists the same\nend users. A deleted end user is not listed. ``external_id`` reads one end user by any id, one containing '/'\nincluded, as a list of zero or one.",
+        "operationId": "end-users-list_end_users",
+        "parameters": [
+          {
+            "name": "skip",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Skip"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 1000,
+              "minimum": 1,
+              "default": 100,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "budget_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only end users on this budget.",
+              "title": "Budget Id"
+            },
+            "description": "Only end users on this budget."
+          },
+          {
+            "name": "blocked",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only end users that are, or are not, blocked.",
+              "title": "Blocked"
+            },
+            "description": "Only end users that are, or are not, blocked."
+          },
+          {
+            "name": "external_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only the end user the service names with this `user` value: zero or one.",
+              "title": "External Id"
+            },
+            "description": "Only the end user the service names with this `user` value: zero or one."
+          },
+          {
+            "name": "include_total",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Also count every matching end user, in the Otari-Total-Count response header.",
+              "default": false,
+              "title": "Include Total"
+            },
+            "description": "Also count every matching end user, in the Otari-Total-Count response header."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/EndUserPublic"
+                  },
+                  "title": "Response End-Users-List End Users"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "XApiKeyAuth": []
+          }
+        ]
+      },
+      "put": {
+        "tags": ["end-users"],
+        "summary": "Put End User By Query",
+        "description": "Put the end user named by ``external_id`` on a budget from the key's list, creating it if needed.\n\nThe same as ``PUT /end-users/{external_id}``, for any id, one containing '/' included.",
+        "operationId": "end-users-put_end_user_by_query",
+        "parameters": [
+          {
+            "name": "external_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The id the service names the end user by in a request's user field, any id, '/' included",
+              "title": "External Id"
+            },
+            "description": "The id the service names the end user by in a request's user field, any id, '/' included"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EndUserPut"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EndUserPublic"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "The end user was created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EndUserPublic"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "XApiKeyAuth": []
+          }
+        ]
+      },
+      "patch": {
+        "tags": ["end-users"],
+        "summary": "Update End User By Query",
+        "description": "Block, unblock or move the end user named by ``external_id``.\n\nThe same as ``PATCH /end-users/{external_id}``, for any id, one containing '/' included.",
+        "operationId": "end-users-update_end_user_by_query",
+        "parameters": [
+          {
+            "name": "external_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The id the service names the end user by in a request's user field, any id, '/' included",
+              "title": "External Id"
+            },
+            "description": "The id the service names the end user by in a request's user field, any id, '/' included"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EndUserUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EndUserPublic"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "XApiKeyAuth": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": ["end-users"],
+        "summary": "Delete End Users",
+        "description": "Delete one end user of the calling service key, or a page of those created before a time.\n\nRequires a service key, and exactly one of ``external_id`` and ``created_before``. ``external_id`` deletes that\nend user, any id, one containing '/' included, and answers 404 when it has none. ``created_before`` deletes up\nto ``limit`` of the oldest end users created before then; call again until ``deleted`` is 0. An end user's\ntelemetry and agent traces are erased with it. The end user's row and spend are kept: a request naming it again\nrevives it with what it had spent, so deleting one cannot clear its budget. A deleted end user is neither listed\nnor counted.",
+        "operationId": "end-users-delete_end_users",
+        "parameters": [
+          {
+            "name": "external_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Delete the end user the service names with this `user` value.",
+              "title": "External Id"
+            },
+            "description": "Delete the end user the service names with this `user` value."
+          },
+          {
+            "name": "created_before",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Delete the end users created before this time, oldest first, up to `limit` of them.",
+              "title": "Created Before"
+            },
+            "description": "Delete the end users created before this time, oldest first, up to `limit` of them."
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 1000,
+              "minimum": 1,
+              "description": "The most end users one call deletes with `created_before`.",
+              "default": 100,
+              "title": "Limit"
+            },
+            "description": "The most end users one call deletes with `created_before`."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EndUsersDeleted"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "XApiKeyAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/end-user-budgets": {
+      "get": {
+        "tags": ["end-users"],
+        "summary": "List End User Budgets",
+        "description": "List the budgets the calling service key may put its end users on, with their limits and end user counts.\n\nRequires a service key. Each budget's name, limits and period are the ones every end user on it is held to. The\ncounts cover the end users of the key's user, blocked ones included and deleted ones not.",
+        "operationId": "end-users-list_end_user_budgets",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/EndUserBudgetPublic"
+                  },
+                  "type": "array",
+                  "title": "Response End-Users-List End User Budgets"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "XApiKeyAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/usage/requests/{request_id}": {
+      "get": {
+        "tags": ["usage"],
+        "summary": "Get Request Settlement",
+        "description": "Look up a request's settled cost by the ``Otari-Request-ID`` it was sent.\n\nThis is how a caller recovers the cost of a request whose response never\ncarried one: a stream that failed or was disconnected mid-response, or a\nrequest that errored. An API key sees only the requests it made; the master\nkey sees any. Returns 404 until the request has settled (its rows are written\nby a background writer, so a lookup made the instant a stream closes can\nprecede them), and for an id that is unknown or belongs to another key, with\nno way to tell those apart. A stream that failed, including one the provider\ncut, always writes an error row. A stream the client abandoned before the\nprovider reported usage, with no gateway tool work, writes a row only under\nthe ``estimate`` policy, billed on an estimate; otherwise it writes none, so\nits id stays 404.",
+        "operationId": "usage-get_request_settlement",
+        "parameters": [
+          {
+            "name": "request_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 255,
+              "title": "Request Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RequestSettlement"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKeyAuth": []
+          },
+          {
+            "XApiKeyAuth": []
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "CodeExecuteRequest": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Code",
+            "description": "Python source to run in the sandbox"
+          },
+          "container": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Container",
+            "description": "'auto' to hold the sandbox after the run, or a container id an earlier response named in Otari-Container-Id to run in that sandbox again, with its files and interpreter state. Omitted, the sandbox is released when the run ends."
+          },
+          "timeout_seconds": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timeout Seconds",
+            "description": "How long the code may run. Never more than the workspace's code execution ceiling, or 60 seconds when it sets none."
+          },
+          "file_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array",
+                "maxItems": 32
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "File Ids",
+            "description": "Uploads from POST /api/v1/files to put in the working directory before the code runs, each under its own filename."
+          },
+          "user": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User",
+            "description": "User ID for usage attribution"
+          }
+        },
+        "type": "object",
+        "required": ["code"],
+        "title": "CodeExecuteRequest",
+        "description": "A direct code execution request: the code to run, and the sandbox to run it in.",
+        "example": {
+          "code": "print(1 + 1)",
+          "container": "auto"
+        }
+      },
+      "CodeExecuteResponse": {
+        "properties": {
+          "object": {
+            "type": "string",
+            "const": "code_execution.result",
+            "title": "Object",
+            "default": "code_execution.result"
+          },
+          "stdout": {
+            "type": "string",
+            "title": "Stdout"
+          },
+          "stderr": {
+            "type": "string",
+            "title": "Stderr"
+          },
+          "return_code": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Return Code",
+            "description": "The program's exit status; null when the sandbox did not report one."
+          },
+          "files": {
+            "items": {
+              "$ref": "#/components/schemas/CodeExecutionOutputFile"
+            },
+            "type": "array",
+            "title": "Files",
+            "description": "The files the code wrote. Empty when it wrote none, or where the Files API is off."
+          }
+        },
+        "type": "object",
+        "required": ["stdout", "stderr", "return_code", "files"],
+        "title": "CodeExecuteResponse",
+        "description": "A completed code execution. Code that failed is a completed execution with a nonzero ``return_code``."
+      },
+      "CodeExecutionOutputFile": {
+        "properties": {
+          "file_id": {
+            "type": "string",
+            "title": "File Id",
+            "description": "Download it from GET /api/v1/files/{file_id}/content"
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename",
+            "description": "The name the code gave it in the working directory"
+          }
+        },
+        "type": "object",
+        "required": ["file_id", "filename"],
+        "title": "CodeExecutionOutputFile",
+        "description": "A file the code wrote, stored in the Files API."
+      },
+      "EndUserBudgetPublic": {
+        "properties": {
+          "budget_id": {
+            "type": "string",
+            "title": "Budget Id"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "max_budget": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Budget",
+            "description": "Dollars each end user may spend over the period"
+          },
+          "token_limit": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Token Limit"
+          },
+          "request_limit": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Request Limit"
+          },
+          "rpm_limit": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rpm Limit"
+          },
+          "tpm_limit": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tpm Limit"
+          },
+          "budget_duration_sec": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Budget Duration Sec"
+          },
+          "reset_alignment": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reset Alignment"
+          },
+          "is_default": {
+            "type": "boolean",
+            "title": "Is Default",
+            "description": "Whether a new end user starts here when its request names no budget"
+          },
+          "end_user_count": {
+            "type": "integer",
+            "title": "End User Count",
+            "description": "End users of the key's user on this budget, blocked ones included"
+          },
+          "blocked_end_user_count": {
+            "type": "integer",
+            "title": "Blocked End User Count"
+          }
+        },
+        "type": "object",
+        "required": ["budget_id", "is_default", "end_user_count", "blocked_end_user_count"],
+        "title": "EndUserBudgetPublic",
+        "description": "A budget a service key may put its end users on, and how many of them are on it."
+      },
+      "EndUserPublic": {
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "title": "User Id"
+          },
+          "external_id": {
+            "type": "string",
+            "title": "External Id"
+          },
+          "owner_user_id": {
+            "type": "string",
+            "title": "Owner User Id"
+          },
+          "budget_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Budget Id"
+          },
+          "blocked": {
+            "type": "boolean",
+            "title": "Blocked"
+          },
+          "spend": {
+            "type": "number",
+            "title": "Spend"
+          },
+          "reserved": {
+            "type": "number",
+            "title": "Reserved"
+          },
+          "current_tokens": {
+            "type": "integer",
+            "title": "Current Tokens"
+          },
+          "current_requests": {
+            "type": "integer",
+            "title": "Current Requests"
+          },
+          "budget_started_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Budget Started At"
+          },
+          "next_budget_reset_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Budget Reset At"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "user_id",
+          "external_id",
+          "owner_user_id",
+          "budget_id",
+          "blocked",
+          "spend",
+          "reserved",
+          "current_tokens",
+          "current_requests",
+          "budget_started_at",
+          "next_budget_reset_at",
+          "created_at"
+        ],
+        "title": "EndUserPublic",
+        "description": "An end user of a service key, addressed by the id the service named it by."
+      },
+      "EndUserPut": {
+        "properties": {
+          "budget_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Budget Id",
+            "description": "A budget on the key's end_user_budget_ids"
+          }
+        },
+        "type": "object",
+        "required": ["budget_id"],
+        "title": "EndUserPut",
+        "description": "Create an end user ahead of its first request, or move one, onto a budget on the key's list."
+      },
+      "EndUserUpdate": {
+        "properties": {
+          "blocked": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Blocked",
+            "description": "Whether the end user is refused"
+          },
+          "budget_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Budget Id",
+            "description": "A budget on the key's end_user_budget_ids to move the end user to"
+          }
+        },
+        "type": "object",
+        "title": "EndUserUpdate",
+        "description": "Block, unblock or move an end user. An omitted field is left as it is."
+      },
+      "EndUsersDeleted": {
+        "properties": {
+          "deleted": {
+            "type": "integer",
+            "title": "Deleted",
+            "description": "End users deleted by this call. A page as full as the limit may leave more."
+          }
+        },
+        "type": "object",
+        "required": ["deleted"],
+        "title": "EndUsersDeleted",
+        "description": "How many end users a delete removed."
+      },
+      "FetchRequest": {
+        "properties": {
+          "url": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Url",
+            "description": "The page to fetch: one public http or https URL."
+          },
+          "fetch_tool_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fetch Tool Name",
+            "description": "Configured fetch tool to run on, builtin_fetch included. Optional: the deployment's web_fetch_default_tool serves, else builtin_fetch. Ignored on POST /api/v1/fetch/{fetch_tool_name}."
+          },
+          "max_chars": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Chars",
+            "description": "Cut the page text to this many characters. Unset, the tool's own max_chars option applies, else the provider's own limits."
+          },
+          "include_raw": {
+            "type": "boolean",
+            "title": "Include Raw",
+            "description": "Also return the provider's whole response, as raw. builtin_fetch calls no provider, so its raw holds only content_kind and redirect_count.",
+            "default": false
+          },
+          "provider_options": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider Options",
+            "description": "Native options for the provider that serves the call, under the provider's own names, as GET /api/v1/search-tools/providers?kind=fetch lists them. An option the provider does not take from a request is refused with a 400. On a call that names no tool they go to whichever provider serves it, so name the tool when they are meant for one provider."
+          },
+          "user": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User",
+            "description": "User ID for usage attribution"
+          }
+        },
+        "type": "object",
+        "required": ["url"],
+        "title": "FetchRequest",
+        "description": "A direct fetch request: one page, read through the deployment's fetch tool or the one named.",
+        "example": {
+          "max_chars": 20000,
+          "url": "https://example.com/article"
+        }
+      },
+      "FetchResponse": {
+        "properties": {
+          "object": {
+            "type": "string",
+            "const": "fetch",
+            "title": "Object",
+            "default": "fetch"
+          },
+          "fetch_tool": {
+            "type": "string",
+            "title": "Fetch Tool",
+            "description": "The configured fetch tool that served the request"
+          },
+          "url": {
+            "type": "string",
+            "title": "Url",
+            "description": "The URL fetched, as asked, in canonical form."
+          },
+          "final_url": {
+            "type": "string",
+            "title": "Final Url",
+            "description": "Where the page was found after redirects. The URL asked for when the provider does not report where a redirect led (reports_final_url in the provider catalog)."
+          },
+          "title": {
+            "type": "string",
+            "title": "Title",
+            "description": "The page's title; empty when the provider gave none.",
+            "default": ""
+          },
+          "content_type": {
+            "type": "string",
+            "title": "Content Type",
+            "description": "The page's content type; empty when the provider does not report one.",
+            "default": ""
+          },
+          "text": {
+            "type": "string",
+            "title": "Text",
+            "description": "The page's text, as the provider extracted it."
+          },
+          "published": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Published",
+            "description": "When the page was published, where the provider reports it."
+          },
+          "truncated": {
+            "type": "boolean",
+            "title": "Truncated",
+            "description": "Whether text is less than the whole page: the body or the extracted text hit a limit of the provider's, or max_chars cut it."
+          },
+          "raw": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Raw",
+            "description": "The provider's whole response, untouched; only when the request set include_raw."
+          }
+        },
+        "type": "object",
+        "required": ["fetch_tool", "url", "final_url", "text", "truncated"],
+        "title": "FetchResponse",
+        "description": "A completed direct fetch: one page's text and where it came from."
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          },
+          "code": {
+            "type": "string",
+            "const": "invalid_request",
+            "title": "Code",
+            "description": "Stable error code, also sent as the Otari-Error-Code header."
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "KeyBudgetPublic": {
+        "properties": {
+          "budgets_enforced": {
+            "type": "boolean",
+            "title": "Budgets Enforced",
+            "description": "False when budgets are off for this key: it is budget-exempt, or the deployment runs with budget_strategy disabled. True otherwise, even when no cap applies"
+          },
+          "remaining_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Remaining Usd",
+            "description": "The fewest dollars any dollar cap on every provider leaves; null when none applies. A token, request or provider-narrowed cap in limits can refuse a request sooner"
+          },
+          "limits": {
+            "items": {
+              "$ref": "#/components/schemas/KeyLimitPublic"
+            },
+            "type": "array",
+            "title": "Limits",
+            "description": "The key's user's budget first, then each spend ceiling, the most specific first"
+          }
+        },
+        "type": "object",
+        "required": ["budgets_enforced", "remaining_usd", "limits"],
+        "title": "KeyBudgetPublic",
+        "description": "What the calling key may still spend, and every cap that decides it."
+      },
+      "KeyLimitPublic": {
+        "properties": {
+          "scope": {
+            "type": "string",
+            "title": "Scope",
+            "description": "Where the cap sits: 'user' for the budget the key's user is on, or the scope of a spend ceiling: 'api_token', 'workspace_member', 'org_member', 'workspace' or 'organization'"
+          },
+          "provider": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider",
+            "description": "The provider this cap is narrowed to, or null when it caps every one"
+          },
+          "resets_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resets At",
+            "description": "When the period ends and use starts again from zero; null for a cap that never resets"
+          },
+          "limit_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Limit Usd",
+            "description": "Dollars allowed per period; null when uncapped or shared"
+          },
+          "used_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Used Usd",
+            "description": "Dollars spent and held this period; null when uncapped or shared"
+          },
+          "remaining_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Remaining Usd",
+            "description": "Dollars left this period; null when dollars are uncapped"
+          },
+          "limit_tokens": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Limit Tokens"
+          },
+          "used_tokens": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Used Tokens"
+          },
+          "remaining_tokens": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Remaining Tokens"
+          },
+          "limit_requests": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Limit Requests"
+          },
+          "used_requests": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Used Requests"
+          },
+          "remaining_requests": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Remaining Requests"
+          }
+        },
+        "type": "object",
+        "required": ["scope", "provider", "resets_at", "limit_usd", "used_usd", "remaining_usd"],
+        "title": "KeyLimitPublic",
+        "description": "One cap a request made with the calling key has to pass.\n\n``used_*`` counts what the budget gate counts: recorded use plus the holds of\nrequests still in flight. On a cap the key shares with the rest of its\nworkspace or organization the limit and the use are left out, and only what\nis left is reported; that still moves as the others spend."
+      },
+      "ManagedTool": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "The canonical tool type to put in `tools[]`."
+          },
+          "object": {
+            "type": "string",
+            "const": "tool",
+            "title": "Object",
+            "default": "tool"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description",
+            "description": "What the tool does, as the model is told."
+          },
+          "available": {
+            "type": "boolean",
+            "title": "Available",
+            "description": "Whether a request from this caller may declare the tool: the deployment has enabled and configured it and, for an API key, the key's workspace allows it. A master key or a dashboard session gets the deployment's answer alone. A request declaring an unavailable tool is refused."
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": ["not_configured", "workspace_disabled"]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason",
+            "description": "Why the tool is unavailable, `null` when it is available. `not_configured`: nothing is set up to run it (for web search, neither the deployment nor the API key's organization has a search provider). `workspace_disabled`: the API key's workspace does not allow it, which a workspace admin changes under Tools in the dashboard."
+          },
+          "accepted_types": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Accepted Types",
+            "description": "Every `tools[].type` this deployment currently routes to the tool. Always includes the canonical `otari_*` type; for web search it also includes the provider-named keywords when interception is enabled and the deployment has a search of its own, and for code execution the provider-named keywords unless the deployment's executor is `provider`."
+          },
+          "input_schema": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Input Schema",
+            "description": "JSON Schema for the arguments the model supplies, as the model sees it."
+          },
+          "example": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Example",
+            "description": "A ready-to-use `tools[]` entry."
+          }
+        },
+        "type": "object",
+        "required": ["id", "description", "available", "accepted_types", "input_schema", "example"],
+        "title": "ManagedTool",
+        "description": "One tool the gateway can run itself."
+      },
+      "RequestSettlement": {
+        "properties": {
+          "request_id": {
+            "type": "string",
+            "title": "Request Id"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["success", "error"],
+            "title": "Status"
+          },
+          "cost_usd": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cost Usd"
+          },
+          "prompt_tokens": {
+            "type": "integer",
+            "title": "Prompt Tokens"
+          },
+          "completion_tokens": {
+            "type": "integer",
+            "title": "Completion Tokens"
+          },
+          "total_tokens": {
+            "type": "integer",
+            "title": "Total Tokens"
+          },
+          "row_count": {
+            "type": "integer",
+            "title": "Row Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "request_id",
+          "status",
+          "cost_usd",
+          "prompt_tokens",
+          "completion_tokens",
+          "total_tokens",
+          "row_count"
+        ],
+        "title": "RequestSettlement",
+        "description": "What one request settled at, summed over every usage row it wrote.\n\nA routed request writes a row per attempt and a vision-normalized one a row for\nthe describe call, all sharing the ``Otari-Request-ID`` the caller was sent as\ntheir ``request_group_id``, so this is the request's whole bill rather than one\nattempt's. ``cost_usd`` uses the inline ``usage.cost_usd`` format and is null\nwhen no row was priced."
+      },
+      "SearchRequest": {
+        "properties": {
+          "query": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Query",
+            "description": "The search query"
+          },
+          "search_tool_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Search Tool Name",
+            "description": "Configured search tool to run against. Optional when the deployment names a default (web_search_default_tool) or has exactly one tool, and ignored on POST /api/v1/search/{search_tool_name}."
+          },
+          "max_results": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Results",
+            "description": "Maximum number of results to return; 10 when unset. Lowered to the workspace's ceiling when it sets one, and to the provider's own maximum."
+          },
+          "search_domain_filter": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array",
+                "maxItems": 20
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Search Domain Filter",
+            "description": "Restrict results to these domains; prefix a domain with '-' to exclude it instead"
+          },
+          "country": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2,
+                "minLength": 2
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Country",
+            "description": "Two-letter ISO country code to localize results to"
+          },
+          "max_tokens_per_page": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Tokens Per Page",
+            "description": "Approximate cap on the page content returned per result"
+          },
+          "include_raw": {
+            "type": "boolean",
+            "title": "Include Raw",
+            "description": "Also return the provider's whole response, as raw.",
+            "default": false
+          },
+          "provider_options": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider Options",
+            "description": "Native options for the provider that serves the call, under the provider's own names, as GET /api/v1/search-tools/providers lists them. An option the provider does not take from a request is refused with a 400. On a call that names no tool they go to whichever provider serves it, so name the tool when they are meant for one provider."
+          },
+          "user": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User",
+            "description": "User ID for usage attribution"
+          }
+        },
+        "type": "object",
+        "required": ["query"],
+        "title": "SearchRequest",
+        "description": "A direct search request: LiteLLM's ``/v1/search`` body, plus ``include_raw`` and ``provider_options``.",
+        "example": {
+          "max_results": 5,
+          "query": "otari llm gateway"
+        }
+      },
+      "SearchResponse": {
+        "properties": {
+          "object": {
+            "type": "string",
+            "const": "search",
+            "title": "Object",
+            "default": "search"
+          },
+          "search_tool": {
+            "type": "string",
+            "title": "Search Tool",
+            "description": "The configured search tool that served the request"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/SearchResultItem"
+            },
+            "type": "array",
+            "title": "Results"
+          },
+          "raw": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Raw",
+            "description": "The provider's whole response, untouched; only when the request set include_raw."
+          }
+        },
+        "type": "object",
+        "required": ["search_tool", "results"],
+        "title": "SearchResponse",
+        "description": "A completed direct search."
+      },
+      "SearchResultItem": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "title": "Title",
+            "description": "The page's title; empty when the provider gave none."
+          },
+          "url": {
+            "type": "string",
+            "title": "Url"
+          },
+          "snippet": {
+            "type": "string",
+            "title": "Snippet",
+            "description": "The page text the provider returned, else its excerpt, cut to the page budget."
+          },
+          "date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date",
+            "description": "The page's date, as the provider gave it."
+          },
+          "last_updated": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Updated",
+            "description": "Always null: no provider reports it."
+          }
+        },
+        "type": "object",
+        "required": ["title", "url", "snippet"],
+        "title": "SearchResultItem",
+        "description": "One search result, shaped as LiteLLM's ``SearchResult``."
+      },
+      "ToolsResponse": {
+        "properties": {
+          "object": {
+            "type": "string",
+            "const": "list",
+            "title": "Object",
+            "default": "list"
+          },
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/ManagedTool"
+            },
+            "type": "array",
+            "title": "Data"
+          }
+        },
+        "type": "object",
+        "required": ["data"],
+        "title": "ToolsResponse",
+        "description": "The gateway-run tools this deployment exposes."
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": ["loc", "msg", "type"],
+        "title": "ValidationError"
+      }
+    },
+    "securitySchemes": {
+      "ApiKeyAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "Otari-Key",
+        "description": "Enter your API key here (sent as Otari-Key header)."
+      },
+      "XApiKeyAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "x-api-key",
+        "description": "Anthropic-native clients send credentials here (no Bearer prefix)."
+      }
+    }
+  }
+}

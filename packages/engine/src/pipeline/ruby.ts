@@ -275,19 +275,14 @@ export async function fixRubyDependency(
     });
   const docs = documentsForReading(sources);
   const extraction = docs.length
-    ? await extractNotes(
-        input.tf,
-        docs,
-        {
-          name: a.instance.name,
-          from,
-          to: target,
-          removedApis: (a.summary?.breaking ?? []).flatMap((f) =>
-            f.callSites.map((c) => c.snippet.trim().slice(0, 80)),
-          ),
-        },
-        input.prices,
-      )
+    ? await extractNotes(input.ai, docs, {
+        name: a.instance.name,
+        from,
+        to: target,
+        removedApis: (a.summary?.breaking ?? []).flatMap((f) =>
+          f.callSites.map((c) => c.snippet.trim().slice(0, 80)),
+        ),
+      })
     : null;
   const notes = extraction ? migrationNotes(extraction) : [];
   const behaviour = extraction
@@ -317,8 +312,7 @@ export async function fixRubyDependency(
   const run = await runFix({
     ...(renames.length ? { edits: renames } : {}),
     verify: input.verify,
-    tf: input.tf,
-    prices: input.prices,
+    ai: input.ai,
     backend: input.backend,
     runId: input.runId,
     repoDir: input.repoDir,

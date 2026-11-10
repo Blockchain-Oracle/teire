@@ -1,44 +1,37 @@
 /**
- * Head-to-head of the Nemotron models on Teire's two real jobs, so model choice rests on results:
+ * Head-to-head of candidate models through Otari on Teire's two real jobs, so each role's model rests
+ * on results (plan S02):
  *   1. fix: an agent edits a small repo for a real OpenAI retirement (gpt-4 → gpt-5.6-sol, shut down
  *      2026-10-23) where the model ID sits behind a config wrapper, next to decoys it must not touch;
  *   2. extract: turn a real deprecations table (OpenAI, 2026-04-22 section) into typed records.
+ * Every receipt is Otari's: the served model and provider, fallbacks, and the real cost of the job.
  * Run: pnpm --filter @teire/engine exec tsx --env-file=../../.env.local scripts/compare-models.ts <src>
  * where <src> is a local copy of developers.openai.com/api/docs/deprecations.md
- * (fixtures/catalog/openai-deprecations.excerpt.md holds the section it reads). ONLY=super35 runs one.
+ * (fixtures/catalog/openai-deprecations.excerpt.md holds the section it reads).
+ * MODELS=z-ai/glm-5.3,moonshotai/kimi-k2.6 picks the candidates; JOBS=extract runs extraction only.
  */
 import { readFileSync } from "node:fs";
 import { generateText, isStepCount, Output, tool } from "ai";
 import { z } from "zod";
-import {
-  fetchModelPrices,
-  nemotronOptions,
-  nemotronSampling,
-  receiptFor,
-  tokenFactoryConfigFromEnv,
-} from "../src/llm";
+import { createGateway, gatewayConfigFromEnv, receiptOf, sumReceipts } from "../src/gateway";
 
-const MODELS = {
-  ultra: "nvidia/Nemotron-3-Ultra-550b-a55b",
-  // Measured 2026-10-24; Token Factory retires it on 2026-11-09.
-  super: "nvidia/nemotron-3-super-120b-a12b",
-  // Its replacement, Teire's failover since 2026-10-30.
-  super35: "nvidia/Nemotron-3.5-Super-VL",
-  lightning: "nvidia/Nemotron-3_5-Lightning",
-};
+/** Open-weight candidates in Otari's catalog with tool calls and structured output (read 2026-11-10). */
+const CANDIDATES = [
+  "z-ai/glm-5.3",
+  "moonshotai/kimi-k2.6",
+  "deepseek/deepseek-v4-pro-0813",
+  "deepseek/deepseek-v4.1-flash-1017",
+  "minimax/minimax-m3",
+  "openai/gpt-oss-120b",
+];
+const MODELS = process.env.MODELS?.split(",") ?? CANDIDATES;
 const FIX_RUNS = process.env.JOBS === "extract" ? 0 : 3;
-const EXTRACT_RUNS = process.env.THINK === "1" ? 3 : 2;
+const EXTRACT_RUNS = 2;
 
-const config = tokenFactoryConfigFromEnv();
-const { createOpenAICompatible } = await import("@ai-sdk/openai-compatible");
-const provider = createOpenAICompatible({
-  name: "tokenfactory",
-  apiKey: config.apiKey,
-  baseURL: config.baseURL ?? "",
-  includeUsage: true,
-  supportsStructuredOutputs: true,
-});
-const prices = await fetchModelPrices();
+const config = gatewayConfigFromEnv();
+/** One client per candidate: the role a job uses points at that candidate. */
+const clientFor = (id: string) =>
+  createGateway({ ...config, models: { ...config.models, fixer: id, reader: id } }).as(null);
 
 const REPO: Record<string, string> = {
   "src/config.ts": [
@@ -77,10 +70,9 @@ function scoreFix(files: Record<string, string>) {
 async function fixRun(modelId: string) {
   const files = { ...REPO };
   const started = Date.now();
+  const ai = await clientFor(modelId);
   const result = await generateText({
-    model: provider(modelId),
-    ...nemotronSampling,
-    providerOptions: nemotronOptions({ thinking: true, coding: true }),
+    ...ai.call("fixer", { purpose: "compare" }),
     stopWhen: isStepCount(16),
     system:
       "You are Teire's fix agent. You change only what the provider change requires, keep behaviour otherwise identical, never edit recorded test fixtures or historical docs, and call finish when done.",
@@ -129,7 +121,7 @@ async function fixRun(modelId: string) {
       "Make the repository stop using the shut-down model.",
     ].join("\n"),
   });
-  const receipt = receiptFor(result.totalUsage, prices.get(modelId));
+  const receipt = sumReceipts(result.steps.map(receiptOf));
   const score = scoreFix(files);
   return {
     pass: Object.values(score).every(Boolean),
@@ -155,10 +147,9 @@ function expectedRows(section: string) {
 
 async function extractRun(modelId: string, section: string, expected: Map<string, string>) {
   const started = Date.now();
+  const ai = await clientFor(modelId);
   const result = await generateText({
-    model: provider(modelId),
-    ...nemotronSampling,
-    providerOptions: nemotronOptions({ thinking: process.env.THINK === "1" }),
+    ...ai.call("reader", { purpose: "compare" }),
     output: Output.object({
       schema: z.object({
         records: z.array(
@@ -183,7 +174,7 @@ async function extractRun(modelId: string, section: string, expected: Map<string
     extra,
     quotesVerbatim: `${quotesVerbatim}/${result.output.records.length}`,
     ms: Date.now() - started,
-    ...receiptFor(result.usage, prices.get(modelId)),
+    ...receiptOf(result),
   };
 }
 
@@ -195,19 +186,15 @@ const section = source.slice(
 );
 const expected = expectedRows(section);
 
-const only = process.env.ONLY?.split(",");
-for (const [name, id] of Object.entries(MODELS)) {
-  if (only && !only.includes(name)) continue;
-  if (name !== "lightning") {
-    for (let i = 0; i < FIX_RUNS; i++) {
-      const r = await fixRun(id).catch((e: Error) => ({ error: e.message.slice(0, 200) }));
-      console.log(JSON.stringify({ job: "fix", model: name, run: i + 1, ...r }));
-    }
+for (const id of MODELS) {
+  for (let i = 0; i < FIX_RUNS; i++) {
+    const r = await fixRun(id).catch((e: Error) => ({ error: e.message.slice(0, 200) }));
+    console.log(JSON.stringify({ job: "fix", model: id, run: i + 1, ...r }));
   }
   for (let i = 0; i < EXTRACT_RUNS; i++) {
     const r = await extractRun(id, section, expected).catch((e: Error) => ({
       error: e.message.slice(0, 200),
     }));
-    console.log(JSON.stringify({ job: "extract", model: name, run: i + 1, ...r }));
+    console.log(JSON.stringify({ job: "extract", model: id, run: i + 1, ...r }));
   }
 }

@@ -1,11 +1,11 @@
 import { ASSISTANT } from "@teire/engine/constants";
 import {
-  createTokenFactory,
-  nemotronOptions,
-  nemotronSampling,
-  receiptFor,
-  tokenFactoryConfigFromEnv,
-} from "@teire/engine/llm";
+  BudgetExceededError,
+  type GatewayReceipt,
+  noReceipt,
+  receiptOf,
+  sumReceipts,
+} from "@teire/engine/gateway";
 import {
   consumeStream,
   convertToModelMessages,
@@ -13,12 +13,11 @@ import {
   createUIMessageStream,
   createUIMessageStreamResponse,
   isStepCount,
-  type LanguageModelUsage,
   streamText,
   toUIMessageStream,
   validateUIMessages,
 } from "ai";
-import { priceOf, reserve, settle } from "@/lib/assistant/budget";
+import { reserve, settle } from "@/lib/assistant/budget";
 import type { AssistantContext, AssistantMessage, AssistantMetadata } from "@/lib/assistant/message";
 import { instructionsFor } from "@/lib/assistant/prompt";
 import {
@@ -35,11 +34,12 @@ import { assistantTools } from "@/lib/assistant/tools";
 import { readableRepo, type Viewer, viewerOf } from "@/lib/assistant/viewer";
 import { getChange } from "@/lib/catalog";
 import { searchDocs } from "@/lib/docs-search";
+import { viewerAi } from "@/lib/gateway";
 import { runSheet } from "@/lib/run-sheet";
 
 /**
- * Ask Teire's reply (plan revision 3.3, U4): Nemotron 3 Ultra on Token Factory (3.5 Super as failover), streamed with its tool
- * steps. Stop (or a closed tab) aborts the model through the request's signal, and the partial reply
+ * Ask Teire's reply (plan revision 3.3, U4): the assistant model through Otari, billed to the person
+ * asking (their own daily allowance), streamed with its tool steps; Otari falls back across hosts. Stop (or a closed tab) aborts the model through the request's signal, and the partial reply
  * is still stored, marked interrupted (`consumeSseStream`). Each reply is reserved against the
  * assistant's own budget before the model runs and settled to its real cost after.
  */
@@ -143,8 +143,8 @@ export async function POST(request: Request) {
     )
   ).flat();
 
-  const tf = createTokenFactory(tokenFactoryConfigFromEnv());
-  const model = tf.modelId("assistant");
+  const ai = await viewerAi(viewer.userId);
+  const model = ai.modelId("assistant");
   const reservation = await reserve({ userId: viewer.userId, threadId: thread.id, model });
 
   // Budget reached: said plainly, with docs search results labelled as search results.
@@ -168,25 +168,14 @@ export async function POST(request: Request) {
     return createUIMessageStreamResponse({ stream });
   }
 
-  // Priced by the model that answered: a failover part way through is priced as the failover (U4 review).
-  let price = await priceOf(model);
   const started = Date.now();
-  let usage: LanguageModelUsage | null = null;
-  // Steps that finished, totalled as they end: a reply stopped mid-way still pays for what it used.
-  const steps = { inputTokens: 0, outputTokens: 0, cached: 0 };
-  const receipt = () =>
-    receiptFor(
-      usage ??
-        ({
-          inputTokens: steps.inputTokens,
-          outputTokens: steps.outputTokens,
-          inputTokenDetails: { cacheReadTokens: steps.cached },
-        } as LanguageModelUsage),
-      price,
-    );
+  // Otari's receipt per finished step (its own cost, the model and host that answered): a reply
+  // stopped mid-way still pays for, and shows, what it used.
+  const steps: GatewayReceipt[] = [];
+  const receipt = () => sumReceipts(steps) ?? noReceipt();
 
   const result = streamText({
-    model: tf.model("assistant"),
+    ...ai.call("assistant", { purpose: mode === "docs" ? "assistant-docs" : "assistant" }),
     instructions: instructionsFor({
       mode,
       name: viewer.name,
@@ -204,15 +193,8 @@ export async function POST(request: Request) {
     abortSignal: request.signal,
     timeout: { totalMs: ASSISTANT.replyMs },
     temperature: ASSISTANT.temperature,
-    topP: nemotronSampling.topP,
-    providerOptions: nemotronOptions({ thinking: false }),
-    onStepEnd: ({ usage: step }) => {
-      steps.inputTokens += step.inputTokens ?? 0;
-      steps.outputTokens += step.outputTokens ?? 0;
-      steps.cached += step.inputTokenDetails?.cacheReadTokens ?? 0;
-    },
-    onEnd: ({ usage: total }) => {
-      usage = total;
+    onStepEnd: (step) => {
+      steps.push(receiptOf(step));
     },
   });
 
@@ -225,20 +207,23 @@ export async function POST(request: Request) {
       messageMetadata: ({ part }): AssistantMetadata | undefined => {
         if (part.type === "start") return { createdAt: Date.now(), model };
         if (part.type === "finish") {
-          usage = part.totalUsage;
           const r = receipt();
           return { tokensIn: r.tokensIn, tokensOut: r.tokensOut, costUsd: Number(r.costUsd.toFixed(5)) };
         }
         return undefined;
       },
       onError: (error) => {
+        // The person's own daily allowance on Otari is spent: said plainly, with when it comes back.
+        if (error instanceof BudgetExceededError && error.scope === "user") {
+          const at = error.resetsAt();
+          return `You've used today's Ask Teire allowance${at ? `; it comes back at ${at.toISOString().slice(11, 16)} UTC` : ""}.`;
+        }
         console.error("[assistant]", error);
-        return "Nemotron didn't answer this time. Try again, or search the docs.";
+        return "Teire's model didn't answer this time. Try again, or search the docs.";
       },
       onEnd: async ({ responseMessage, isAborted, outcome }) => {
-        const answered = tf.modelId("assistant");
-        if (answered !== model) price = await priceOf(answered);
         const r = receipt();
+        const answered = r.servedModel ?? model;
         const interrupted = isAborted || outcome.status !== "completed";
         try {
           if (responseMessage.parts.length) {
@@ -261,6 +246,13 @@ export async function POST(request: Request) {
             costUsd: r.costUsd,
             latencyMs: Date.now() - started,
             failed: outcome.status === "failed" && !r.tokensOut,
+            endUser: ai.endUser?.id ?? null,
+            requestId: r.requestId,
+            servedModel: r.servedModel,
+            provider: r.provider,
+            fallback: r.fallback,
+            toolCalls: r.toolCalls,
+            guardrails: r.guardrails,
           });
         }
       },
