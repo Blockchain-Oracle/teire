@@ -99,15 +99,19 @@ export async function setRepo(db: Database, id: number, fields: Partial<typeof r
  */
 export async function isWideInstallation(db: Database, installationId: number | null) {
   if (!installationId) return false;
-  const [row] = await db
-    .select({
-      selection: installations.repositorySelection,
-      repos: sql<number>`(select count(*)::int from ${repos} where ${repos.installationId} = ${installations.id} and ${repos.status} <> 'disabled')`,
-    })
+  // Two plain queries: in a one-table select Drizzle writes columns unqualified, so a correlated
+  // subquery's `installations.id` would silently read as `repos.id` (it counted 0 on the first deploy).
+  const [inst] = await db
+    .select({ selection: installations.repositorySelection })
     .from(installations)
     .where(eq(installations.id, installationId))
     .limit(1);
-  return row?.selection === "all" && row.repos > WIDE_INSTALL.repos;
+  if (inst?.selection !== "all") return false;
+  const [row] = await db
+    .select({ n: sql<number>`count(*)::int` })
+    .from(repos)
+    .where(and(eq(repos.installationId, installationId), ne(repos.status, "disabled")));
+  return (row?.n ?? 0) > WIDE_INSTALL.repos;
 }
 
 export async function startScan(
