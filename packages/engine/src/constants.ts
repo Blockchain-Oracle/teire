@@ -226,13 +226,14 @@ export const RUNS = {
    * Fix runs the worker takes at once, each from a different repository (the queue keeps one per
    * repository in order). Each holds two sandboxes (Token Factory allows 50 per project) and up to
    * about 1 GB of the worker's 4 GB while it diffs an API; the resolver service queues its own jobs.
+   * TEIRE_FIX_CONCURRENCY lowers it on a host shared with other services.
    */
-  fixConcurrency: 3,
+  fixConcurrency: Number(process.env.TEIRE_FIX_CONCURRENCY ?? 3),
   /**
    * Scans the worker runs at once, each a different repository: one long scan (a monorepo) no longer
-   * holds every other repository's first scan (Codex walk B27).
+   * holds every other repository's first scan (Codex walk B27). TEIRE_SCAN_CONCURRENCY lowers it.
    */
-  scanConcurrency: 2,
+  scanConcurrency: Number(process.env.TEIRE_SCAN_CONCURRENCY ?? 2),
   /** The run page polls this often while a run is active. */
   pollEveryMs: 1000,
   /**
