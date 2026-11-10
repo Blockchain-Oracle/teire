@@ -243,6 +243,14 @@ export const RUNS = {
   dashboardSyncMs: 30 * 1000,
 } as const;
 
+/**
+ * A wide installation covers a whole account ("All repositories" on GitHub) with more than `repos`
+ * repositories. The person picks on the welcome page instead: until a repository is picked (scanned
+ * from the picker) or turned on, nothing is scanned on its own and no onboarding PR is opened, so an
+ * account with hundreds of repositories gets no pull requests it did not ask for.
+ */
+export const WIDE_INSTALL = { repos: 10 } as const;
+
 export const SCAN = {
   /** Largest repository tarball Teire will extract. */
   maxTarballBytes: 200 * 1024 * 1024,

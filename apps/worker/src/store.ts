@@ -26,6 +26,7 @@ import {
 } from "@teire/db";
 import { sha256 } from "@teire/engine/catalog";
 import { effectiveFixMode, type TeireConfig } from "@teire/engine/config";
+import { WIDE_INSTALL } from "@teire/engine/constants";
 import { type ChangeV2, type Coverage, type DependencyInstance, lineageKey } from "@teire/engine/contract";
 import type { FindingDraft } from "@teire/engine/impact";
 
@@ -89,6 +90,24 @@ export async function getRepo(db: Database, id: number) {
 
 export async function setRepo(db: Database, id: number, fields: Partial<typeof repos.$inferInsert>) {
   await db.update(repos).set(fields).where(eq(repos.id, id));
+}
+
+/**
+ * Whether the person picks this installation's repositories on the welcome page (`WIDE_INSTALL`): it
+ * covers the whole account and more repositories than that. Then a repository that was never picked
+ * or turned on gets no scan on its own and no onboarding PR.
+ */
+export async function isWideInstallation(db: Database, installationId: number | null) {
+  if (!installationId) return false;
+  const [row] = await db
+    .select({
+      selection: installations.repositorySelection,
+      repos: sql<number>`(select count(*)::int from ${repos} where ${repos.installationId} = ${installations.id} and ${repos.status} <> 'disabled')`,
+    })
+    .from(installations)
+    .where(eq(installations.id, installationId))
+    .limit(1);
+  return row?.selection === "all" && row.repos > WIDE_INSTALL.repos;
 }
 
 export async function startScan(

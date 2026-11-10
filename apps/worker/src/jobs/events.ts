@@ -1,4 +1,5 @@
 import { eq, inArray, repos, scans } from "@teire/db";
+import { WIDE_INSTALL } from "@teire/engine/constants";
 import { STALE_EVIDENCE_LABEL } from "@teire/engine/github";
 import { forgetDependencyCaches } from "../caches";
 import type { Delivery } from "../outbox";
@@ -8,6 +9,7 @@ import {
   fixModeOf,
   getArtifact,
   getRepo,
+  isWideInstallation,
   markFindings,
   markInstallation,
   openArtifacts,
@@ -95,13 +97,18 @@ export async function handleDelivery(ctx: EventContext, delivery: Delivery) {
         return setInstallationPaused(db, installation.id, false);
       }
       await upsertInstallation(db, installation);
-      if (delivery.action === "created")
-        for (const r of (p.repositories ?? []) as RepoPayload[]) {
+      if (delivery.action === "created") {
+        const listed = (p.repositories ?? []) as RepoPayload[];
+        // A wide installation (WIDE_INSTALL) is picked on the welcome page: its repositories are saved
+        // and wait there, unscanned.
+        const wide = installation.repository_selection === "all" && listed.length > WIDE_INSTALL.repos;
+        for (const r of listed) {
           const repo = await upsertRepo(db, r, installation.id);
           // Installed again after an uninstall: the uninstall left the repository marked removed.
           if (repo.status === "disabled") await setRepo(db, repo.id, { status: "detected" });
-          await ctx.enqueueScan(repo.id, "install");
+          if (!wide) await ctx.enqueueScan(repo.id, "install");
         }
+      }
       return;
     }
     case "installation_repositories": {
@@ -124,7 +131,8 @@ export async function handleDelivery(ctx: EventContext, delivery: Delivery) {
       // account's repositories: GitHub says so only here, so it is scanned like an installed one.
       if (p.installation && (delivery.action === "created" || delivery.action === "transferred")) {
         if (repo.status === "disabled") await setRepo(db, repo.id, { status: "detected" });
-        await ctx.enqueueScan(repo.id, "install");
+        // A wide installation's new repository waits to be picked, like the rest of them.
+        if (!(await isWideInstallation(db, p.installation.id))) await ctx.enqueueScan(repo.id, "install");
       }
       // Deleted on GitHub: nothing left to scan or fix.
       if (delivery.action === "deleted") {
@@ -450,9 +458,15 @@ export async function reconcileInstallation(ctx: EventContext, installationId: n
         ).map((r) => r.id)
       : [],
   );
+  // A wide installation's repositories wait on the welcome page; they are saved, never queued here.
+  const wide = await isWideInstallation(db, installationId);
   for (const r of listed as RepoPayload[]) {
     ids.add(r.id);
     const repo = await upsertRepo(db, r, installationId);
+    if (wide) {
+      if (repo.status === "disabled") await setRepo(db, repo.id, { status: "detected" });
+      continue;
+    }
     // New to Teire (a fork or a repository created with no webhook), or back after a removal: scanned
     // as an installed one is, which opens its onboarding PR.
     // Also one saved but never scanned at all (an earlier reconcile saved it without a scan); one

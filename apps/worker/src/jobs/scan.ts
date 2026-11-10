@@ -61,6 +61,7 @@ import {
   getArtifact,
   getRepo,
   heartbeatScan,
+  isWideInstallation,
   openArtifacts,
   openLineages,
   recentlySettled,
@@ -520,6 +521,11 @@ export async function scanRepo(
   // A repository that left its installation (uninstalled, removed) while this scan waited.
   if (!repo?.installationId) return { skipped: "no installation" };
   if (repo.status === "paused" || repo.status === "disabled") return { skipped: repo.status };
+  // A wide installation (WIDE_INSTALL): a repository nobody picked or turned on is read only when the
+  // welcome page's picker or a person asks ("manual", "command"); installs, pushes and catalog news
+  // leave it alone, and the scan that does run opens no onboarding PR.
+  const wide = repo.status === "detected" && (await isWideInstallation(db, repo.installationId));
+  if (wide && trigger !== "manual" && trigger !== "command") return { skipped: "not picked" };
   const [owner = "", name = ""] = repo.fullName.split("/");
   const installation = await gh.installation(repo.installationId);
   const token = await installation.token();
@@ -724,6 +730,8 @@ export async function scanRepo(
       }
       return { status, ...(pr ? { onboarding: pr.html_url } : {}) };
     }
+    // Picked on the welcome page of a wide installation: read, shown there, and turned on from there.
+    if (status === "detected" && wide) return { status };
     if (status === "detected") {
       // Onboarding PR: the inventory, what Teire would do, and the config file whose merge activates it.
       const { title, body } = onboarding();

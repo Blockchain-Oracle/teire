@@ -1,6 +1,6 @@
 "use client";
 
-import { PULL_REQUESTS } from "@teire/engine/constants";
+import { PULL_REQUESTS, WIDE_INSTALL } from "@teire/engine/constants";
 import {
   Activity,
   ArrowLeft,
@@ -25,6 +25,7 @@ import NumberTicker from "@/components/ui/number-ticker";
 import { Switch } from "@/components/ui/switch";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { LeafBurst } from "@/components/welcome/leaf-burst";
+import { RepoPicker } from "@/components/welcome/repo-picker";
 import { type Brand, ECOSYSTEMS, SPONSORS, STACK, TEIRE } from "@/lib/brands";
 import { FIX_MODES } from "@/lib/fix-mode-options";
 import type { FlowLink, FlowState } from "@/lib/flow/model";
@@ -84,7 +85,11 @@ function layout(step: number, data: Data, chosen: Set<string>, mode: Mode, resul
     y: 0,
     brand: TEIRE,
   };
-  const repos = data.repos.slice(0, 5);
+  // Picked repositories first, so the canvas shows what the person chose out of hundreds.
+  const repos = [
+    ...data.repos.filter((r) => chosen.has(r.fullName)),
+    ...data.repos.filter((r) => !chosen.has(r.fullName)),
+  ].slice(0, 5);
   const more = data.repos.length - repos.length;
   const ry = (i: number, n: number) => (i - (n - 1) / 2) * 104;
 
@@ -291,9 +296,20 @@ export function Onboarding({ data, updated }: { data: Data; updated: boolean }) 
   const [mode, setMode] = useState<Mode>(data.installation.defaultFixMode ?? "auto");
   const [security, setSecurity] = useState<"auto" | "ask">(data.installation.securityFixMode ?? "auto");
   const [closePrs, setClosePrs] = useState(true);
+  // A wide installation (WIDE_INSTALL: the whole account, many repositories) starts with nothing
+  // picked but what is already on; nothing was scanned for it, so leaving the picker scans the picks.
+  const wide = data.installation.selection === "all" && data.repos.length > WIDE_INSTALL.repos;
   const [chosen, setChosen] = useState<Set<string>>(
-    () => new Set(data.repos.filter((r) => r.status !== "disabled").map((r) => r.fullName)),
+    () =>
+      new Set(
+        data.repos
+          .filter((r) =>
+            wide ? r.status === "active" || r.status === "onboarding" : r.status !== "disabled",
+          )
+          .map((r) => r.fullName),
+      ),
   );
+  const [kickedAt, setKickedAt] = useState(0);
   const [results, setResults] = useState<Record<string, Result>>({});
   const [busy, setBusy] = useState(false);
 
@@ -339,7 +355,7 @@ export function Onboarding({ data, updated }: { data: Data; updated: boolean }) 
     (r) =>
       chosen.has(r.fullName) &&
       (!r.scan || r.scan.status === "queued" || r.scan.status === "running") &&
-      Date.now() - Date.parse(r.scan?.at ?? r.createdAt) < 10 * 60_000,
+      Date.now() - Math.max(Date.parse(r.scan?.at ?? r.createdAt), kickedAt) < 10 * 60_000,
   );
   useEffect(() => {
     if (!scanning.length) return;
@@ -362,8 +378,11 @@ export function Onboarding({ data, updated }: { data: Data; updated: boolean }) 
     const fresh = data.repos.filter((r) => !seen.has(r.fullName));
     if (!fresh.length) return;
     setSeen(new Set(data.repos.map((r) => r.fullName)));
-    setChosen((c) => new Set([...c, ...fresh.filter((r) => r.status !== "disabled").map((r) => r.fullName)]));
-  }, [data.repos, seen]);
+    if (!wide)
+      setChosen(
+        (c) => new Set([...c, ...fresh.filter((r) => r.status !== "disabled").map((r) => r.fullName)]),
+      );
+  }, [data.repos, seen, wide]);
 
   const saveMode = async () => {
     let refused: string | null = null;
@@ -442,6 +461,13 @@ export function Onboarding({ data, updated }: { data: Data; updated: boolean }) 
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: the actions read the current choices
   const next = useCallback(async () => {
+    if (step === 1 && wide) {
+      const unread = data.repos.filter((r) => chosen.has(r.fullName) && !r.scan);
+      if (unread.length) {
+        setKickedAt(Date.now());
+        for (const r of unread) void retry(r.fullName);
+      }
+    }
     if (step === 3) {
       setBusy(true);
       await saveMode();
@@ -449,7 +475,7 @@ export function Onboarding({ data, updated }: { data: Data; updated: boolean }) 
     }
     if (step === 4) return void activate();
     setStep((s) => Math.min(s + 1, STEPS.length - 1));
-  }, [step, mode, security, chosen, closePrs]);
+  }, [step, mode, security, chosen, closePrs, wide]);
 
   // Enter continues, except on a control.
   useEffect(() => {
@@ -572,68 +598,13 @@ export function Onboarding({ data, updated }: { data: Data; updated: boolean }) 
             </p>
           ) : null}
           {step === 1 ? (
-            <ul className="flex flex-col gap-1.5">
-              {data.repos.length > 1 ? (
-                <li className="flex items-center justify-between gap-3 px-3 py-1">
-                  <span className="font-mono text-[11px] text-ink-3">
-                    {chosen.size} of {data.repos.length}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setChosen(
-                        chosen.size === data.repos.length
-                          ? new Set()
-                          : new Set(data.repos.map((r) => r.fullName)),
-                      )
-                    }
-                    className="text-xs text-ink-2 hover:text-ink"
-                  >
-                    {chosen.size === data.repos.length ? "Select none" : "Select all"}
-                  </button>
-                </li>
-              ) : null}
-              {data.repos.map((r) => (
-                <li
-                  key={r.fullName}
-                  className="flex items-center justify-between gap-3 rounded-card bg-sunken px-3 py-2"
-                >
-                  <span className="min-w-0 truncate font-mono text-[13px]">{r.fullName}</span>
-                  <Switch
-                    checked={chosen.has(r.fullName)}
-                    disabled={r.status === "active"}
-                    onCheckedChange={(on) =>
-                      setChosen((c) => {
-                        const n = new Set(c);
-                        if (on) n.add(r.fullName);
-                        else n.delete(r.fullName);
-                        return n;
-                      })
-                    }
-                    aria-label={`Turn Teire on for ${r.fullName}`}
-                  />
-                </li>
-              ))}
-              {(data.needsAccess ?? []).map((fullName) => (
-                <li
-                  key={fullName}
-                  className="flex items-center justify-between gap-3 rounded-card border border-dashed border-rule px-3 py-2"
-                >
-                  <span className="min-w-0 truncate font-mono text-[13px] text-ink-2">{fullName}</span>
-                  <span className="shrink-0 rounded-full bg-attention-soft px-2 py-0.5 font-mono text-[11px] text-attention">
-                    Needs GitHub access
-                  </span>
-                </li>
-              ))}
-              <li className="px-3 pt-1">
-                <a
-                  href={data.installation.manage}
-                  className="inline-flex items-center gap-1 text-[13px] text-link hover:underline"
-                >
-                  Change repository access on GitHub <ExternalLink className="size-3" />
-                </a>
-              </li>
-            </ul>
+            <RepoPicker
+              repos={data.repos}
+              chosen={chosen}
+              onChange={setChosen}
+              needsAccess={data.needsAccess ?? []}
+              manage={data.installation.manage}
+            />
           ) : null}
 
           {step === 2 ? (
