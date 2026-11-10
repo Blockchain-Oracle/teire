@@ -1,5 +1,5 @@
-import { DISCOVERY, END_USERS } from "../constants";
-import { createOtariRest, gatewayConfigFromEnv, type OtariRest } from "../gateway";
+import { DISCOVERY } from "../constants";
+import { createGateway, endUsers, type Gateway } from "../gateway";
 
 /**
  * Web search and fetch through Otari (`POST /api/v1/search`, `/api/v1/fetch`), for providers with no
@@ -8,7 +8,7 @@ import { createOtariRest, gatewayConfigFromEnv, type OtariRest } from "../gatewa
  * fallback for a page whose own HTML holds no text (rendered by script).
  *
  * Discovery is shared work (one provider's pages serve every repository that uses it), so a service
- * key bills searches to Teire's catalog end user; an ordinary key (the CLI) names no end user.
+ * key bills searches and fetches to Teire's catalog end user; an ordinary key (the CLI) names nobody.
  */
 export interface WebUsage {
   endpoint: "search" | "fetch";
@@ -22,27 +22,28 @@ export interface WebSearchResult {
   title: string;
 }
 
-let rest: OtariRest | null = null;
-const client = () => {
-  rest ??= createOtariRest(gatewayConfigFromEnv());
-  return rest;
+let gateway: Gateway | null = null;
+const catalog = () => {
+  gateway ??= createGateway();
+  return gateway.as(endUsers.catalog);
 };
-const catalogUser = () => (process.env.OTARI_SERVICE_KEY ? { user: END_USERS.catalog.id } : {});
 
 export async function webSearch(
   query: string,
   includeDomains: string[],
 ): Promise<{ results: WebSearchResult[]; usage: WebUsage }> {
   const started = Date.now();
-  const data = await client().search(
+  const { rest, billing } = await catalog();
+  const data = await rest.search(
     {
       query,
       max_results: DISCOVERY.search.maxResults,
       // Otari takes at most 20 domains; the provider's own come first in the list.
       search_domain_filter: includeDomains.slice(0, DISCOVERY.search.maxDomains),
-      ...catalogUser(),
+      ...(billing.user ? { user: billing.user } : {}),
     },
     AbortSignal.timeout(DISCOVERY.search.timeoutMs),
+    billing.headers,
   );
   return {
     results: data.results.map((r) => ({ url: r.url, title: r.title ?? "" })),
@@ -52,9 +53,11 @@ export async function webSearch(
 
 export async function webFetch(url: string): Promise<{ content: string | null; usage: WebUsage }> {
   const started = Date.now();
-  const data = await client().fetch(
-    { url, max_chars: DISCOVERY.search.fetchMaxChars },
+  const { rest, billing } = await catalog();
+  const data = await rest.fetch(
+    { url, max_chars: DISCOVERY.search.fetchMaxChars, ...(billing.user ? { user: billing.user } : {}) },
     AbortSignal.timeout(DISCOVERY.search.timeoutMs),
+    billing.headers,
   );
   return {
     content: data.text || null,

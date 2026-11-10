@@ -77,6 +77,8 @@ export interface CallSettings {
 /** One gateway, bound to whoever pays for the calls made through it. */
 export interface Ai {
   readonly endUser: EndUser | null;
+  /** Who Otari's REST calls (search, fetch, code) bill, as `call` sends it on chat: `user` and its budget. */
+  readonly billing: { user?: string; headers?: Record<string, string> };
   readonly rest: OtariRest;
   /** The model id (or selector, or policy) a role asks for; `Otari-Model` says what answered. */
   modelId(role: Role): string;
@@ -107,36 +109,42 @@ export function createGateway(config: GatewayConfig = gatewayConfigFromEnv(), fe
   const rest = createOtariRest(config, fetchImpl);
 
   /**
-   * The service key's end-user budgets, or null for an ordinary key. Only a service key may name end
-   * users: an ordinary key that sends `user` is refused (403), so its calls are billed to the key and
-   * name nobody. The answer is kept once known; a failed read is asked again next time.
+   * The service key's end-user budget ids by name, or null for an ordinary key. Only a service key may
+   * name end users: an ordinary key that sends `user` is refused (403), so its calls are billed to the
+   * key and name nobody. The key's kind never changes, so an ordinary key is asked once; a service
+   * key's list is re-read now and then (budgets can be added to it in the dashboard).
    */
-  let budgets: Promise<Map<string, string> | null> | null = null;
-  const serviceBudgets = () => {
-    budgets ??= rest.budgetsByName().then(
-      (map) => new Map([...map].map(([name, b]) => [name, b.budget_id])),
-      (error: unknown) => {
-        if (/requires a service key/i.test(String(error))) return null;
-        budgets = null;
-        return null;
-      },
-    );
-    return budgets;
+  let ordinary = false;
+  const serviceBudgets = async (): Promise<Map<string, string> | null> => {
+    if (ordinary) return null;
+    try {
+      const map = await rest.budgetsByName();
+      return new Map([...map].map(([name, b]) => [name, b.budget_id]));
+    } catch (error) {
+      if (/requires a service key/i.test(String(error))) ordinary = true;
+      return null;
+    }
   };
 
-  /** A client billed to `endUser` (a service key's end user), or to the key itself when null. */
+  /**
+   * A client billed to `requested` (a service key's end user), or to the key itself. An end user is
+   * named only when the key holds its budget: Otari puts a new end user on its budget once, at its
+   * first call, so one created before the budget was on the key would stay uncapped. Until then the
+   * call is billed to the key, as on an ordinary key.
+   */
   async function as(requested: EndUser | null): Promise<Ai> {
-    const service = requested ? await serviceBudgets() : null;
-    const endUser = service ? requested : null;
-    // Only a new end user reads this header: it is the budget Otari starts it on.
-    const budget = endUser ? (service?.get(endUser.budget) ?? null) : null;
+    const budget = requested ? ((await serviceBudgets())?.get(requested.budget) ?? null) : null;
+    const endUser = budget ? requested : null;
+    const billing: Ai["billing"] =
+      endUser && budget ? { user: endUser.id, headers: { "Otari-End-User-Budget": budget } } : {};
     return {
       endUser,
+      billing,
       rest,
       modelId: (role) => config.models[role],
       call: (role, options = {}) => {
         const otari: Record<string, unknown> = {
-          ...(endUser ? { user: endUser.id } : {}),
+          ...(billing.user ? { user: billing.user } : {}),
           metadata: { app: "teire", role, ...(options.purpose ? { purpose: options.purpose } : {}) },
           ...(options.guardrails?.length ? { guardrails: options.guardrails } : {}),
           ...(options.mcpServers?.length ? { mcp_servers: options.mcpServers } : {}),
@@ -146,7 +154,7 @@ export function createGateway(config: GatewayConfig = gatewayConfigFromEnv(), fe
         return {
           model: provider(config.models[role]),
           providerOptions: { otari: otari as Record<string, never> },
-          ...(budget ? { headers: { "Otari-End-User-Budget": budget } } : {}),
+          ...(billing.headers ? { headers: billing.headers } : {}),
         };
       },
     };

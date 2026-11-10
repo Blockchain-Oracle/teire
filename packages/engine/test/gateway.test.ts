@@ -238,6 +238,20 @@ describe("ordinary keys", () => {
     const chat = sent.find((s) => s.url.endsWith("/chat/completions"));
     expect(JSON.parse(chat?.body ?? "{}")).not.toHaveProperty("user");
   });
+
+  it("names no end user while the service key doesn't hold its budget (Otari would create it uncapped)", async () => {
+    const otari = fakeOtari(() => Response.json(COMPLETION, { headers: SERVED }));
+    const gw = createGateway(CONFIG, otari.fetchImpl);
+    const ai = await gw.as(endUsers.operator); // the fake key lists person and installation budgets only
+    expect(ai.endUser).toBeNull();
+    expect(ai.billing).toEqual({});
+    await generateText({ ...ai.call("reader"), prompt: "hi" });
+    expect(otari.chat()?.body).not.toHaveProperty("user");
+    expect(otari.chat()?.headers.get("otari-end-user-budget")).toBeNull();
+
+    const person = await gw.as(endUsers.person(7));
+    expect(person.billing).toEqual({ user: "gh:7", headers: { "Otari-End-User-Budget": "bud_person" } });
+  });
 });
 
 describe("gateway refusals", () => {

@@ -1,4 +1,5 @@
 import createClient from "openapi-fetch";
+import { GATEWAY } from "../constants";
 import { gatewayFetch } from "./errors";
 import type { components, paths } from "./otari";
 
@@ -29,22 +30,22 @@ export function createOtariRest(config: { apiKey: string; baseURL: string }, fet
     );
   };
 
-  // End-user budgets by name (the dashboard's names, END_USERS), read once per process.
-  let budgets: Promise<Map<string, EndUserBudget>> | null = null;
+  // End-user budgets by name (the dashboard's names, END_USERS), read again after GATEWAY.budgetsRefreshMs.
+  let budgets: { read: Promise<Map<string, EndUserBudget>>; at: number } | null = null;
 
   return {
     client,
 
     /** Web search, billed to `user` when the key is a service key (discovery, the researcher). */
-    async search(body: OtariSchemas["SearchRequest"], signal?: AbortSignal) {
-      const { data, error, response } = await client.POST("/api/v1/search", { body, signal });
+    async search(body: OtariSchemas["SearchRequest"], signal?: AbortSignal, headers?: Record<string, string>) {
+      const { data, error, response } = await client.POST("/api/v1/search", { body, signal, headers });
       if (!data) return fail("search", response, error);
       return { ...data, requestId: response.headers.get("otari-request-id") };
     },
 
     /** One page as light Markdown (`max_chars` cuts it; `truncated` says so). */
-    async fetch(body: OtariSchemas["FetchRequest"], signal?: AbortSignal) {
-      const { data, error, response } = await client.POST("/api/v1/fetch", { body, signal });
+    async fetch(body: OtariSchemas["FetchRequest"], signal?: AbortSignal, headers?: Record<string, string>) {
+      const { data, error, response } = await client.POST("/api/v1/fetch", { body, signal, headers });
       if (!data) return fail("fetch", response, error);
       return { ...data, requestId: response.headers.get("otari-request-id") };
     },
@@ -81,17 +82,16 @@ export function createOtariRest(config: { apiKey: string; baseURL: string }, fet
 
     /** The service key's end-user budgets, by name. */
     budgetsByName(): Promise<Map<string, EndUserBudget>> {
-      const read =
-        budgets ??
-        (async () => {
-          const { data, error, response } = await client.GET("/api/v1/end-user-budgets");
-          if (!data) {
-            budgets = null; // the next caller asks again
-            return fail("end-user budgets", response, error);
-          }
-          return new Map(data.flatMap((b) => (b.name ? [[b.name, b] as const] : [])));
-        })();
-      budgets = read;
+      if (budgets && Date.now() - budgets.at < GATEWAY.budgetsRefreshMs) return budgets.read;
+      const read = (async () => {
+        const { data, error, response } = await client.GET("/api/v1/end-user-budgets");
+        if (!data) {
+          budgets = null; // the next caller asks again
+          return fail("end-user budgets", response, error);
+        }
+        return new Map(data.flatMap((b) => (b.name ? [[b.name, b] as const] : [])));
+      })();
+      budgets = { read, at: Date.now() };
       return read;
     },
 

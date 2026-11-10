@@ -30,8 +30,9 @@ The amounts are first values; S02 measures cost per fix run and per reply and th
 
 ## 3. Keys (API keys → Create key)
 
-**Service key** (Advanced → service key). The service flag and the budget list cannot be changed
-after the key is created.
+**Service key** (Advanced → service key). The service flag cannot be changed after the key is
+created; its default budget and budget list can (edit the key), and apply to end users created from
+then on.
 - Name: `teire-service`
 - Service key: on
 - Default end-user budget (`end_user_budget_id`): `teire-person-daily`
@@ -43,9 +44,11 @@ after the key is created.
 **CLI key** (an ordinary key, not a service key)
 - Name: `teire-cli`
 
-The first key made (2026-11-10) is an ordinary key: it is saved as `OTARI_API_KEY` and runs
-everything today, billed to the key. Per-person and per-installation allowances start working the
-moment a service key is saved as `OTARI_SERVICE_KEY` (the gateway checks the key type itself).
+The first key made (2026-11-10) is an ordinary key, saved as `OTARI_API_KEY`. The service key
+(2026-11-10) is saved as `OTARI_SERVICE_KEY` and is the one the app uses. Teire names an end user only
+when the service key holds that end user's budget (Otari puts a new end user on a budget once, at its
+first call), so calls are billed to the key until the budgets are on it, and the gateway re-reads the
+key's budget list every five minutes: budgets added to the key apply without a redeploy.
 
 Give both keys to Claude through the secrets file, never in chat:
 `/Users/abu/dev/hackathon/otari/.secrets/teire-otari.env`, lines `OTARI_SERVICE_KEY=…` and

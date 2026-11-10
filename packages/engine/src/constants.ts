@@ -26,6 +26,8 @@ export const GATEWAY = {
   providerName: "otari",
   /** Otari's server-side tool loop (web search, fetch, code, MCP): its default rounds, and its cap is 25. */
   maxToolIterations: 10,
+  /** How long the service key's end-user budget list is kept: budgets added in the dashboard apply within this. */
+  budgetsRefreshMs: 5 * 60_000,
 } as const;
 
 /**
