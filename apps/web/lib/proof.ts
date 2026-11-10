@@ -96,7 +96,7 @@ export const STEP_DOING: Record<string, string> = {
   transaction: "Applying the change",
   fix: "Applying the change",
   codemod: "Making the deterministic edits",
-  agent: "Nemotron is fixing the code",
+  agent: "The fixer model is fixing the code",
   replan: "Planning another attempt",
   install: "Installing in the sandbox",
   "install-triage": "Working out why the install failed",

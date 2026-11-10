@@ -357,7 +357,7 @@ export async function whyNoPr(repo: ReadableRepo, asked: string) {
   ).rows;
   const cap = Number(process.env.TEIRE_DAILY_COST_CAP_USD ?? 10);
   if ((credits?.value as { exhausted?: boolean } | undefined)?.exhausted)
-    hold("Model budget", "Token Factory credits are used up; runs resume when they're topped up");
+    hold("Model budget", "Teire's Otari balance is used up; runs resume when it's topped up");
   else if (cap > 0 && Number(spent?.usd ?? 0) >= cap)
     hold("Model budget", `Today's fix budget ($${cap.toFixed(2)}) is used up; runs resume as it frees`);
   else ok("Model budget", "Within today's budget");

@@ -146,7 +146,7 @@ export interface RunFlowInput extends RunForProof {
   agent?: { calls: number; attempts?: number } | null;
   /** Deterministic edits ran (a `codemod` step). Neither this nor the agent: no code edits. */
   codemod?: boolean;
-  /** The sandbox backend ("tokenfactory" | "cloudflare"). */
+  /** The sandbox backend ("cloudflare"). */
   backend?: string | null;
   /** The checks' figure, already formatted ("4/4 → 4/4"), and how many checks ran. */
   checksFigure?: string;
@@ -230,8 +230,8 @@ export function runFlow(input: RunFlowInput): FlowGraph {
           id: "fix",
           entity: "fix",
           state: "done",
-          label: "Nemotron 3 Ultra",
-          brand: STACK.nemotron,
+          label: "Fixer model",
+          brand: STACK.model,
           meta:
             input.agent?.attempts && input.agent.attempts > 1
               ? `${input.agent.attempts} attempts · ${input.agent.calls} calls`
@@ -249,7 +249,7 @@ export function runFlow(input: RunFlowInput): FlowGraph {
       label: "Sandbox",
       ...(input.backend === "cloudflare"
         ? { brand: STACK.cloudflare, meta: "Cloudflare" }
-        : { meta: "Token Factory" }),
+        : { meta: "Cloudflare" }),
     },
     {
       id: "check",

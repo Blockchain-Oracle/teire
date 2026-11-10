@@ -211,24 +211,18 @@ export default function Home() {
             </Station>
 
             <Station
-              tile={tile({ entity: "fix", state: "done", label: "Nemotron 3 Ultra", brand: STACK.nemotron })}
-              title="Nemotron fixes it"
-              line="Nemotron rewrites what broke."
+              tile={tile({ entity: "fix", state: "done", label: "Fixer model", brand: STACK.model })}
+              title="An open-weight model fixes it"
+              line="It rewrites what broke, through Otari."
               side={
                 <div className="flex flex-col gap-3 md:items-end">
                   <span className="eyebrow">On</span>
                   <div className="flex items-center gap-3">
                     <BrandLogo
-                      light={SPONSORS.nvidia.light}
-                      dark={SPONSORS.nvidia.dark}
-                      alt="NVIDIA"
-                      className="h-5"
-                    />
-                    <BrandLogo
-                      light={SPONSORS.nebius.light}
-                      dark={SPONSORS.nebius.dark}
-                      alt="Nebius Token Factory"
-                      className="h-4"
+                      light={SPONSORS.otari.light}
+                      dark={SPONSORS.otari.dark}
+                      alt="Otari by Mozilla.ai"
+                      className="h-6"
                     />
                   </div>
                 </div>
@@ -262,13 +256,13 @@ export default function Home() {
                   <li className="flex items-center gap-3">
                     <TileSquare
                       size="sm"
-                      tile={{ entity: "fix", state: "done", label: "Nemotron", brand: STACK.nemotron }}
+                      tile={{ entity: "fix", state: "done", label: "Fixer model", brand: STACK.model }}
                     />
                     <TileLabel
                       size="sm"
                       className="items-start text-left"
                       tile={{
-                        label: "Nemotron 3 Ultra",
+                        label: "Fixer model",
                         meta: `${hero.fix.calls} calls · $${hero.fix.costUsd}`,
                         state: "done",
                       }}
@@ -315,7 +309,7 @@ export default function Home() {
             >
               <div className="flex flex-wrap gap-2">
                 <span className="rounded-full bg-sheet px-3 py-1 text-[13px] shadow-card">
-                  Token Factory Sandboxes
+                  Cloudflare Containers
                 </span>
                 <span className="rounded-full bg-sheet px-3 py-1 text-[13px] shadow-card">
                   Your repo&apos;s own commands

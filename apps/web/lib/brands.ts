@@ -6,7 +6,7 @@ export interface Brand {
   label: string;
   light: string;
   dark: string;
-  /** A wordmark (NVIDIA, Nebius, Tavily): its tile widens instead of shrinking to a square. */
+  /** A wordmark (Otari's): its tile widens instead of shrinking to a square. */
   wide?: boolean;
 }
 
@@ -51,9 +51,8 @@ export const ECOSYSTEMS: Record<string, Brand & { reads: string; site: string }>
 };
 
 export const SPONSORS = {
-  nvidia: { label: "NVIDIA", light: "/logos/nvidia-light.svg", dark: "/logos/nvidia-dark.svg", wide: true },
-  nebius: { label: "Nebius", light: "/logos/nebius-light.svg", dark: "/logos/nebius-dark.svg", wide: true },
-  tavily: { label: "Tavily", light: "/logos/tavily-light.svg", dark: "/logos/tavily-dark.svg", wide: true },
+  /** Otari by Mozilla.ai: every model call, search and fetch goes through it. */
+  otari: { label: "Otari", light: "/logos/otari-light.svg", dark: "/logos/otari-dark.svg", wide: true },
   github: { label: "GitHub", light: "/logos/github-light.svg", dark: "/logos/github-dark.svg" },
 } satisfies Record<string, Brand>;
 
@@ -75,7 +74,7 @@ export const DISCOVERED: Record<string, Brand> = {
     dark: "/logos/openrouter-dark.svg",
   },
   "context7-com": { label: "Context7", light: "/logos/context7-light.svg", dark: "/logos/context7-dark.svg" },
-  "tavily-com": { label: "Tavily", light: SPONSORS.tavily.light, dark: SPONSORS.tavily.dark },
+  "tavily-com": { label: "Tavily", light: "/logos/tavily-light.svg", dark: "/logos/tavily-dark.svg" },
   "twitch-tv": { label: "Twitch", light: "/logos/twitch.svg", dark: "/logos/twitch.svg" },
 };
 
@@ -95,17 +94,8 @@ export const STACK = {
     dark: "/logos/dependabot-dark.svg",
   },
   cloudflare: { label: "Cloudflare", light: "/logos/cloudflare.svg", dark: "/logos/cloudflare.svg" },
-  nemotron: {
-    label: "Nemotron 3 Ultra",
-    light: "/logos/nvidia-icon-light.svg",
-    dark: "/logos/nvidia-icon-dark.svg",
-  },
-  tokenFactory: {
-    label: "Token Factory",
-    light: "/logos/nebius-light.svg",
-    dark: "/logos/nebius-dark.svg",
-    wide: true,
-  },
+  /** The model at work, through Otari: its mark on every model tile. */
+  model: { label: "Otari", light: "/logos/otari-mark.svg", dark: "/logos/otari-mark.svg" },
 } satisfies Record<string, Brand>;
 
 export function ecosystemOf(key: string | null | undefined) {

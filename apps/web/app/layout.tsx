@@ -26,7 +26,7 @@ export const metadata: Metadata = {
     template: "%s · Teire",
   },
   description:
-    "Teire finds the lines a package, API or model change breaks, and a Nemotron coding agent on Nebius Token Factory fixes what a plain swap can't. Your own tests run before and after, and a pull request shows the proof.",
+    "Teire finds the lines a package, API or model change breaks, and an open-weight coding agent, through Otari, fixes what a plain swap can't. Your own tests run before and after, and a pull request shows the proof.",
 };
 
 // The browser chrome before the page runs follows the device; `ThemeColor` then moves it to the site's theme.

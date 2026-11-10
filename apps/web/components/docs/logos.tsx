@@ -39,8 +39,12 @@ export function ProviderRow() {
 export function BuiltOn() {
   return (
     <div className="not-prose my-6 flex flex-wrap items-center gap-8 rounded-lg border border-fd-border bg-fd-card p-5">
-      <BrandLogo light={SPONSORS.nvidia.light} dark={SPONSORS.nvidia.dark} alt="NVIDIA" className="h-6" />
-      <BrandLogo light={SPONSORS.nebius.light} dark={SPONSORS.nebius.dark} alt="Nebius" className="h-5" />
+      <BrandLogo
+        light={SPONSORS.otari.light}
+        dark={SPONSORS.otari.dark}
+        alt="Otari by Mozilla.ai"
+        className="h-7"
+      />
     </div>
   );
 }

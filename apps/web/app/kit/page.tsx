@@ -67,8 +67,8 @@ const ENTITIES: {
   { entity: "repository", label: "Repository", brand: SPONSORS.github },
   { entity: "code", label: "Your code" },
   { entity: "update", label: "dependabot-core", brand: STACK.dependabot },
-  { entity: "fix", label: "Nemotron 3 Ultra", brand: STACK.nemotron },
-  { entity: "sandbox", label: "Sandbox", brand: STACK.tokenFactory },
+  { entity: "fix", label: "Fixer model", brand: STACK.model },
+  { entity: "sandbox", label: "Sandbox", brand: STACK.cloudflare },
   { entity: "check", label: "Your checks" },
   { entity: "outcome", label: "Pull request" },
 ];

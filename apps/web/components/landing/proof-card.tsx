@@ -75,7 +75,7 @@ export function ProofCard({ className }: { className?: string }) {
       </svg>
       <a
         href={hero.pr.url}
-        aria-label="Fixed by NVIDIA Nemotron, proven: the pull request on GitHub"
+        aria-label="Fixed by an open-weight model through Otari, proven: the pull request on GitHub"
         className={cn(
           virgil.className,
           "absolute flex -rotate-3 items-center text-[25px] whitespace-nowrap text-cta hover:underline",
@@ -83,8 +83,8 @@ export function ProofCard({ className }: { className?: string }) {
         style={{ left: pen.note.x, top: pen.note.y }}
       >
         fixed by
-        {/* Nemotron by its mark, not its name (the owner, revamp S4): the logo is the credit. */}
-        <BrandLogo light={STACK.nemotron.dark} alt="" className="-my-2 mx-2 h-10 w-auto" />· proven
+        {/* The model by Otari's mark, not a name: the logo is the credit. */}
+        <BrandLogo light={STACK.model.dark} alt="" className="-my-2 mx-2 h-10 w-auto" />· proven
         <ArrowUpRight className="ml-1 size-4" aria-hidden />
       </a>
     </div>

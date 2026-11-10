@@ -47,6 +47,22 @@ export const ROLE_ENV = {
   assistant: "TEIRE_MODEL_ASSISTANT",
 } as const;
 
+/** People's names for the open-weight models the roles run on (ids from Otari's catalog or its hosts). */
+const MODEL_NAMES: [RegExp, string][] = [
+  [/glm-5[.p]3/i, "GLM 5.3"],
+  [/kimi-k2[.p]6/i, "Kimi K2.6"],
+  [/deepseek-v4[.p]1-flash/i, "DeepSeek V4.1 Flash"],
+  [/deepseek-v4-pro/i, "DeepSeek V4 Pro"],
+  [/minimax-m3/i, "MiniMax M3"],
+  [/gpt-oss-120b/i, "gpt-oss-120b"],
+  [/rune-26b/i, "Rune 26B"],
+];
+
+/** A model id as people say it ("deepseek/deepseek-v4-pro-0813" → "DeepSeek V4 Pro"); others lose their vendor prefix. */
+export function modelDisplayName(id: string) {
+  return MODEL_NAMES.find(([re]) => re.test(id))?.[1] ?? id.replace(/^.*\//, "");
+}
+
 export const ROLE_DEFAULTS: Record<keyof typeof ROLE_ENV, string> = {
   fixer: "z-ai/glm-5.3",
   reviewer: "deepseek/deepseek-v4-pro-0813",

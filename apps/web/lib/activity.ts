@@ -1,3 +1,4 @@
+import { modelDisplayName } from "@teire/engine/constants";
 /**
  * A run's activity as step rows (plan revision 3.3, "Run, the proof sheet"; Factory's session
  * grammar): the events the worker wrote, grouped by step in the order they happened, with each
@@ -161,14 +162,11 @@ function lineOf(e: Event): string | null {
 
 /** The rows, in order; the last one is live while the run is. */
 /**
- * A model's name as people say it, from the id the calls recorded (`nvidia/Nemotron-3-Ultra-550b-a55b`
- * → "Nemotron 3 Ultra"); any other id is shown without its vendor prefix.
+ * A model's name as people say it, from the id the calls recorded (`z-ai/glm-5.3` → "GLM 5.3");
+ * any other id is shown without its vendor prefix.
  */
 export function modelLabel(model: string | null | undefined) {
-  if (!model) return null;
-  const id = model.replace(/^[\w.-]+\//, "");
-  const nemotron = /^Nemotron-(\d+(?:\.\d+)?)-(Ultra|Super|Nano)\b/i.exec(id);
-  return nemotron ? `Nemotron ${nemotron[1]} ${nemotron[2]}` : id;
+  return model ? modelDisplayName(model) : null;
 }
 
 export function activityOf(

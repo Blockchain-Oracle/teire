@@ -240,8 +240,8 @@ function layout(step: number, data: Data, chosen: Set<string>, mode: Mode, resul
         id: "fix",
         entity: "fix",
         state: "done",
-        label: "Nemotron 3 Ultra",
-        brand: STACK.nemotron,
+        label: "Fixer model",
+        brand: STACK.model,
         x: 340,
         y: 0,
       });

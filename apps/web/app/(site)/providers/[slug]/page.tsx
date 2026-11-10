@@ -89,8 +89,8 @@ async function Provider({ params }: { params: PageProps<"/providers/[slug]">["pa
         id: "reader",
         entity: "fix",
         state: "done",
-        label: discovered ? "Nemotron reads" : "Teire's reader",
-        ...(discovered ? { brand: STACK.nemotron } : {}),
+        label: discovered ? "The reader model reads" : "Teire's reader",
+        ...(discovered ? { brand: STACK.model } : {}),
       },
       { id: "quote", entity: "check", state: "proven", label: "Quotes checked" },
       {

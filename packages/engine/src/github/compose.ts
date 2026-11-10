@@ -1,4 +1,4 @@
-import { PR_MODE_BY_EVIDENCE, PULL_REQUESTS, SITE } from "../constants";
+import { modelDisplayName, PR_MODE_BY_EVIDENCE, PULL_REQUESTS, SITE } from "../constants";
 import type { ChangeV2, Coverage, DependencyInstance } from "../contract";
 import { usageCell } from "../fix/co-moved";
 import type { MigrationNote } from "../fix/codemods";
@@ -29,18 +29,8 @@ const ECOSYSTEM_LABEL: Partial<Record<DependencyInstance["ecosystem"], string>> 
  * covered → rollback → commands. Bodies stay under GitHub's 65,536 characters by dropping the
  * inline diff first, then trimming lists.
  */
-/** People's names for the open-weight models Teire's roles run on (ids from Otari's catalog or its hosts). */
-const MODEL_NAMES: [RegExp, string][] = [
-  [/glm-5[.p]3/i, "GLM 5.3"],
-  [/kimi-k2[.p]6/i, "Kimi K2.6"],
-  [/deepseek-v4[.p]1-flash/i, "DeepSeek V4.1 Flash"],
-  [/deepseek-v4-pro/i, "DeepSeek V4 Pro"],
-  [/minimax-m3/i, "MiniMax M3"],
-  [/gpt-oss-120b/i, "gpt-oss-120b"],
-];
-
 export function modelName(id: string) {
-  return MODEL_NAMES.find(([re]) => re.test(id))?.[1] ?? id;
+  return modelDisplayName(id);
 }
 
 const tokens = (n: number) => (n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n));

@@ -12,7 +12,7 @@ export const contentType = "image/png";
 const STATIONS = [
   { label: hero.run.package, meta: `${hero.run.from} → ${hero.run.to}`, tone: "#14140f" },
   { label: hero.repo.split("/")[1] ?? hero.repo, meta: "installed version", tone: "#14140f" },
-  { label: "Nemotron 3 Ultra", meta: `${hero.fix.calls} calls`, tone: "#14140f" },
+  { label: "Fixer model", meta: `${hero.fix.calls} calls`, tone: "#14140f" },
   { label: "Sandbox", meta: "network off", tone: "#14140f" },
   { label: "Your checks", meta: `${hero.checks.tests.before} → ${hero.checks.tests.after}`, tone: "#137a3f" },
   { label: `PR #${hero.pr.number}`, meta: "ready", tone: "#137a3f" },

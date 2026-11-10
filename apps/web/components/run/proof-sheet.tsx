@@ -17,7 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { activityOf, type Exec, modelLabel } from "@/lib/activity";
-import { SPONSORS, STACK } from "@/lib/brands";
+import { STACK } from "@/lib/brands";
 import { canReplay, sheetAt } from "@/lib/flow/clock";
 import { type FlowTile, runFlow, TILE_OF_STEP } from "@/lib/flow/model";
 import { groupHref } from "@/lib/links";
@@ -479,22 +479,20 @@ export function ProofSheet({ initial }: { initial: RunSheetData }) {
           <TabsContent value="receipt" className="flex flex-col gap-4">
             <div className="grid gap-3 sm:grid-cols-3">
               <Fact
-                mark={
-                  <BrandLogo light={STACK.nemotron.light} dark={STACK.nemotron.dark} alt="" className="h-4" />
-                }
+                mark={<BrandLogo light={STACK.model.light} dark={STACK.model.dark} alt="" className="h-4" />}
                 label={modelLabel(model) ?? "Models"}
                 value={`${sheet.calls.length} calls · $${Number(run.costUsd).toFixed(3)}`}
               />
               <Fact
                 mark={
                   <BrandLogo
-                    light={SPONSORS.nebius.light}
-                    dark={SPONSORS.nebius.dark}
+                    light={STACK.cloudflare.light}
+                    dark={STACK.cloudflare.dark}
                     alt=""
                     className="h-3"
                   />
                 }
-                label={backendName(run.backend).replace("Token Factory ", "")}
+                label={backendName(run.backend)}
                 value={duration(sandboxMs)}
               />
               <Fact label="Total" value={`${tokens.toLocaleString("en")} tokens · ${duration(ms)}`} />

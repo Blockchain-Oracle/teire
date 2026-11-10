@@ -1124,7 +1124,7 @@ export function ChoicesCard({
 
 export function NoticeCard({ notice }: { notice: AssistantNotice }) {
   return (
-    <Card eyebrow={notice.kind === "budget" ? "Budget reached" : "Nemotron didn't answer"}>
+    <Card eyebrow={notice.kind === "budget" ? "Budget reached" : "The model didn't answer"}>
       <p className="text-sm text-ink">{notice.message}</p>
       {notice.results?.length ? (
         <div className="flex flex-col gap-1">

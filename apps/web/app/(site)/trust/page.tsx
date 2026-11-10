@@ -172,7 +172,7 @@ async function Live() {
           value={
             models?.unhealthy?.length
               ? `failover for ${models.unhealthy.map((u) => u.model).join(", ")}`
-              : "Nemotron 3 Ultra answering"
+              : "answering through Otari"
           }
           tone={models?.unhealthy?.length ? "warn" : "ok"}
         />
@@ -257,50 +257,11 @@ const OUTCOME_FILL: Record<string, string> = {
   cancelled: "bg-rule-strong",
 };
 
-const tf = {
-  label: "Token Factory Sandboxes",
-  light: STACK.tokenFactory.light,
-  dark: STACK.tokenFactory.dark,
-  wide: true,
-};
-
-/** The two ways code travels, as flows: public repositories and dry runs, and private repositories. */
+/** How code travels, as a flow: every repository and dry run, through Teire's own sandbox. */
 const PATHS: { id: string; title: string; graph: FlowGraph }[] = [
   {
-    id: "public",
-    title: "Public repositories and dry runs",
-    graph: {
-      tiles: [
-        {
-          id: "gh",
-          entity: "repository",
-          state: "done",
-          label: "GitHub",
-          meta: "tarball, one commit",
-          brand: SPONSORS.github,
-        },
-        {
-          id: "sb",
-          entity: "sandbox",
-          state: "done",
-          label: "microVM per command",
-          meta: "install: open network",
-          brand: tf,
-        },
-        { id: "chk", entity: "check", state: "proven", label: "Your checks", meta: "before and after" },
-        { id: "pr", entity: "outcome", state: "done", label: "Pull request", meta: "a person merges" },
-      ],
-      links: [
-        { from: "gh", to: "sb", state: "done" },
-        // The network is cut before your checks run: drawn as the cut edge (plan revision 3.4, V5).
-        { from: "sb", to: "chk", state: "skipped", label: "network off" },
-        { from: "chk", to: "pr", state: "proven" },
-      ],
-    },
-  },
-  {
-    id: "private",
-    title: "Private repositories",
+    id: "every",
+    title: "Every repository and dry run",
     graph: {
       tiles: [
         {
@@ -388,9 +349,9 @@ function Code() {
       </div>
       <div className="grid gap-3 md:grid-cols-2">
         <Fact
-          brand={STACK.nemotron}
+          brand={STACK.model}
           title="The only model that reads code"
-          line="NVIDIA Nemotron 3 Ultra on Nebius Token Factory; Super steps in while Ultra is down. Every call is on its run's receipt."
+          line="Open-weight models through Otari (mozilla.ai): one model per job, with Otari falling back across hosts. Every call is on its run's receipt, with the model and host that answered."
         />
         <Fact
           brand={STACK.dependabot}
@@ -405,7 +366,7 @@ function Code() {
         <Fact
           icon={Timer}
           title="What is kept"
-          line="A scan deletes its checkout when it ends. Token Factory keeps a run's saved sandbox images of public code for 180 days; after that, untagged ones may be deleted. Teire keeps findings, proposed diffs, run logs and receipts."
+          line="A scan deletes its checkout when it ends, and a sandbox is destroyed when its run ends. Teire keeps findings, proposed diffs, run logs and receipts."
         />
       </div>
     </section>

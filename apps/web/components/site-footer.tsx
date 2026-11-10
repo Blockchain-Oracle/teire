@@ -39,8 +39,7 @@ const COLUMNS = [
 
 /** What a run is built on, as marks (plan revision 3.4: the footer names the stack, never in prose). */
 const BUILT_ON = [
-  { brand: SPONSORS.nvidia, label: "NVIDIA Nemotron", height: "h-4" },
-  { brand: SPONSORS.nebius, label: "Nebius Token Factory", height: "h-3.5" },
+  { brand: SPONSORS.otari, label: "Otari by Mozilla.ai", height: "h-5" },
   { brand: STACK.dependabot, label: "dependabot-core", height: "h-4" },
   { brand: STACK.cloudflare, label: "Cloudflare", height: "h-4" },
 ];

@@ -1,6 +1,7 @@
 "use client";
 
 import { useChat } from "@ai-sdk/react";
+import { modelDisplayName, ROLE_DEFAULTS } from "@teire/engine/constants";
 import { DefaultChatTransport, getToolName, isToolUIPart } from "ai";
 import { AtSign, Copy, MessageCircleQuestion, RotateCcw, ThumbsDown, ThumbsUp } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -97,15 +98,9 @@ const SUGGESTIONS: Record<string, string[]> = {
   docs: ["How does Teire prove a fix?", "How do I turn on Ask first?", "What does teire.yml control?"],
 };
 
+/** The model that answered, as people say it; Ask Teire's own role model before the first reply. */
 function modelName(id: string | undefined) {
-  if (!id) return "Nemotron 3 Ultra";
-  return /ultra/i.test(id)
-    ? "Nemotron 3 Ultra"
-    : /super/i.test(id)
-      ? /3\.5/.test(id)
-        ? "Nemotron 3.5 Super"
-        : "Nemotron 3 Super"
-      : id.split("/").pop();
+  return modelDisplayName(id ?? ROLE_DEFAULTS.assistant);
 }
 
 function Thread({
@@ -281,7 +276,7 @@ function ModelDown({ question, onRetry }: { question: string; onRetry: () => voi
   return (
     <div className="flex flex-col gap-2 rounded-lg bg-sheet p-3 ring-1 ring-rule ring-inset">
       <span className="flex items-center gap-2 text-xs">
-        <span className="text-broke">Nemotron didn't answer this time.</span>
+        <span className="text-broke">The model didn't answer this time.</span>
         <button type="button" className="entity-link text-ink" onClick={onRetry}>
           Retry
         </button>
@@ -753,7 +748,7 @@ function Composer({
                 <AtSign className="size-3.5" aria-hidden />
               </button>
             ) : null}
-            <span className="font-mono text-[11px] text-ink-3">{model} · Nebius Token Factory</span>
+            <span className="font-mono text-[11px] text-ink-3">{model} · through Otari</span>
           </PromptInputTools>
           <PromptInputSubmit
             status={status}
