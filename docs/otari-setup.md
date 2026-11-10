@@ -64,7 +64,6 @@ Give both keys to Claude through the secrets file, never in chat:
 
 Checked on 2026-11-10 with `GET /api/v1/tools`: code execution is available; **web search and web
 fetch answer `workspace_disabled`**. Turn both on:
-
 - Web search: Allowed.
 - Web fetch: Allowed.
 - Code execution: Follow the deployment default (or Allowed).
@@ -72,9 +71,40 @@ fetch answer `workspace_disabled`**. Turn both on:
 
 ## 6. Routing policies (Workspace → Routing → Policies)
 
-Filled in during S02 from measured runs: five policies (`teire-fixer`, `teire-reviewer`,
-`teire-reader`, `teire-researcher`, `teire-assistant`), each a fallback chain of concrete
-provider offerings, at most five entries, with tier-down at 80 % of the end user's budget.
+One policy per role. Each starts on the offering that answered best in S02's measurements
+(`scripts/otari-offerings.ts`, `scripts/compare-models.ts`, 2026-11-10), moves to a cheaper model
+once the end user has used 80 % of its budget, and falls back to other hosts, then to a second
+model. Every entry below answered a structured-output request through Otari on 2026-11-10. A plan
+holds at most five candidates.
+
+Teire switches a role to its policy only after each policy answers a test call
+(`TEIRE_MODEL_<ROLE>=teire-<role>`). Until then each role uses its catalog id, which Otari already
+falls back across up to five hosts of the same model.
+
+| Policy             | When 80 % of the budget is used                  | Default                                          | On failure, in order                                                                                                                |
+| ------------------ | ------------------------------------------------ | ------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `teire-fixer`      | `deepinfra:moonshotai/Kimi-K2.6`                 | `fireworks:accounts/fireworks/models/glm-5p3`    | `together:zai-org/GLM-5.3`, `mistral:zai-glm-5-3`, `deepinfra:moonshotai/Kimi-K2.6`                                                 |
+| `teire-reviewer`   | `deepinfra:deepseek-ai/DeepSeek-V4.1-Flash-1017` | `deepinfra:deepseek-ai/DeepSeek-V4-Pro-0813`     | `together:deepseek-ai/DeepSeek-V4-Pro-0813`, `nebius:deepseek-ai/DeepSeek-V4-Pro-0813`, `together:zai-org/GLM-5.3`                  |
+| `teire-reader`     | `deepinfra:openai/gpt-oss-120b`                  | `deepinfra:deepseek-ai/DeepSeek-V4.1-Flash-1017` | `mistral:deepseek-v4-1-flash-1017`, `fireworks:accounts/fireworks/models/deepseek-v4p1-flash-1017`, `deepinfra:openai/gpt-oss-120b` |
+| `teire-researcher` | `deepinfra:deepseek-ai/DeepSeek-V4.1-Flash-1017` | `deepinfra:MiniMaxAI/MiniMax-M3`                 | `fireworks:accounts/fireworks/models/minimax-m3`, `nebius:MiniMaxAI/MiniMax-M3`, `deepinfra:deepseek-ai/DeepSeek-V4.1-Flash-1017`   |
+| `teire-assistant`  | (none: already the cheapest)                     | `deepinfra:openai/gpt-oss-120b`                  | `together:openai/gpt-oss-120b`, `nebius:openai/gpt-oss-120b`, `deepinfra:deepseek-ai/DeepSeek-V4.1-Flash-1017`                      |
+
+As configuration (the dashboard's policy editor takes the same fields):
+
+```yaml
+teire-fixer:
+  select:
+    - when: { budget_used_pct: { gte: 80 } }
+      target: deepinfra:moonshotai/Kimi-K2.6
+    - default: fireworks:accounts/fireworks/models/glm-5p3
+  on_failure:
+    - together:zai-org/GLM-5.3
+    - mistral:zai-glm-5-3
+    - deepinfra:moonshotai/Kimi-K2.6
+```
+
+Left out on purpose: `together:MiniMaxAI/MiniMax-M3` refuses structured output (400), and
+`nebius:MiniMaxAI/MiniMax-M3` took 42 s for a one-line answer.
 
 ## 7. Guardrails (Organization → Guardrails)
 

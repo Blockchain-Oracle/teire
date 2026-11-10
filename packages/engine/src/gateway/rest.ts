@@ -37,7 +37,11 @@ export function createOtariRest(config: { apiKey: string; baseURL: string }, fet
     client,
 
     /** Web search, billed to `user` when the key is a service key (discovery, the researcher). */
-    async search(body: OtariSchemas["SearchRequest"], signal?: AbortSignal, headers?: Record<string, string>) {
+    async search(
+      body: OtariSchemas["SearchRequest"],
+      signal?: AbortSignal,
+      headers?: Record<string, string>,
+    ) {
       const { data, error, response } = await client.POST("/api/v1/search", { body, signal, headers });
       if (!data) return fail("search", response, error);
       return { ...data, requestId: response.headers.get("otari-request-id") };

@@ -4,7 +4,9 @@
  * Reads every offering from Otari's catalog (`GET /api/v1/catalog/models/{id}`), sends each one small
  * JSON-schema request billed to the key, and prints one line per offering: status, latency, cost,
  * the provider that answered and whether Otari fell back.
- * Run: pnpm --filter @teire/engine exec tsx scripts/otari-offerings.ts (Otari key in the env).
+ * `--policies` calls each role's routing policy (`teire-<role>`) once instead: every one must answer
+ * before `TEIRE_MODEL_<ROLE>` points the role at it.
+ * Run: pnpm --filter @teire/engine exec tsx scripts/otari-offerings.ts [--policies] (Otari key in the env).
  */
 import { generateText, Output } from "ai";
 import { z } from "zod";
@@ -44,6 +46,25 @@ async function probe(selector: string) {
       "A repository calls get(url, cb) twice. Is upgrading safe or breaking? One short reason.",
   });
   return { ms: Date.now() - started, verdict: result.output.verdict, ...receiptOf(result) };
+}
+
+if (process.argv.includes("--policies")) {
+  for (const role of Object.keys(ROLE_DEFAULTS)) {
+    const policy = `teire-${role}`;
+    const r = await probe(policy).then(
+      (x) => ({
+        ok: true,
+        ms: x.ms,
+        servedModel: x.servedModel,
+        provider: x.provider,
+        attempts: x.attempts,
+        fallback: x.fallback,
+      }),
+      (e: Error) => ({ ok: false, error: e.message.slice(0, 220) }),
+    );
+    console.log(JSON.stringify({ role, policy, ...r }));
+  }
+  process.exit(0);
 }
 
 for (const model of MODELS) {
