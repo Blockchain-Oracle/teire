@@ -65,6 +65,12 @@ export interface CallOptions {
   maxToolIterations?: number;
   /** A tag on Otari's usage rows (`metadata.purpose`), e.g. `fix`, `notes`, `triage`. */
   purpose?: string;
+  /**
+   * One id for every call of one conversation (a fix run's agent loop, an Ask Teire thread), sent as
+   * `Otari-Conversation-Id`: Otari keeps the conversation on the host that answered its first turn,
+   * so the provider's prompt cache is reused instead of every step paying for the whole prompt again.
+   */
+  conversation?: string;
 }
 
 /** What a call spreads into `generateText` / `streamText`: the model and Otari's request fields. */
@@ -154,7 +160,14 @@ export function createGateway(config: GatewayConfig = gatewayConfigFromEnv(), fe
         return {
           model: provider(config.models[role]),
           providerOptions: { otari: otari as Record<string, never> },
-          ...(billing.headers ? { headers: billing.headers } : {}),
+          ...(billing.headers || options.conversation
+            ? {
+                headers: {
+                  ...billing.headers,
+                  ...(options.conversation ? { "Otari-Conversation-Id": options.conversation } : {}),
+                },
+              }
+            : {}),
         };
       },
     };

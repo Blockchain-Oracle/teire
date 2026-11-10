@@ -25,10 +25,14 @@ issue is drafted from here and approved before it is posted). Source references 
    search and messages.
 5. **402 in the Python SDK README** is described as "budget or credits exhausted"; the gateway refuses
    a spent budget with 403 `budget_exceeded` and uses 402 for `insufficient_funds` / `pricing_required`.
-6. **Decisions on otari.ai.** The hosted catalog lists `/systemone` among the endpoints of
-   `fireworks:accounts/fireworks/models/rune` (`surogate/rune-26b-a4b`), while the open-source router
-   refuses any selector whose prefix isn't a configured decision provider (`_decisions.py:84-98`) and
-   the hosted decisions page names only `typesafe` and `openrouter`. Which string to send is unclear.
+6. **Decisions on otari.ai are listed but not served.** `GET /api/v1/models` lists
+   `surogate/rune-26b-a4b` as `type: decision`, and the catalog lists `/systemone` among the endpoints
+   of `fireworks:accounts/fireworks/models/rune` and `…/routers/rune`. On 2026-11-10 `POST
+   /api/v1/systemone` refused all three spellings with 400 "does not name a configured decision
+   provider. Use '<provider>:<model>' with one of: none." `/messages` answers "This model only serves
+   /v1/systemone", and `/responses` answers 424 `provider_credential_rejected`. So the decision model
+   can't be reached on the hosted deployment; either the catalog shouldn't list it, or
+   `decision_providers` should include the provider it lists.
 
 ## Rough edges
 

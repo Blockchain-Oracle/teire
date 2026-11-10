@@ -175,7 +175,10 @@ export async function POST(request: Request) {
   const receipt = () => sumReceipts(steps) ?? noReceipt();
 
   const result = streamText({
-    ...ai.call("assistant", { purpose: mode === "docs" ? "assistant-docs" : "assistant" }),
+    ...ai.call("assistant", {
+      purpose: mode === "docs" ? "assistant-docs" : "assistant",
+      conversation: `thread:${thread.id}`,
+    }),
     instructions: instructionsFor({
       mode,
       name: viewer.name,

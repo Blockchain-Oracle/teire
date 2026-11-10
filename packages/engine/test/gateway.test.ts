@@ -132,6 +132,14 @@ describe("gateway requests and receipts", () => {
     expect(r.toolCalls[0]).toMatchObject({ type: "web_search", query: "zod 4 migration" });
   });
 
+  it("sends one conversation id beside the budget header, so a loop stays on one host", async () => {
+    const otari = fakeOtari(() => Response.json(COMPLETION, { headers: SERVED }));
+    const ai = await createGateway(CONFIG, otari.fetchImpl).as(endUsers.installation(42));
+    await generateText({ ...ai.call("fixer", { conversation: "fix:run_1" }), prompt: "hi" });
+    expect(otari.chat()?.headers.get("otari-conversation-id")).toBe("fix:run_1");
+    expect(otari.chat()?.headers.get("otari-end-user-budget")).toBe("bud_inst");
+  });
+
   it("sends no `user` and no budget header for a client billed to the key itself (the CLI)", async () => {
     const otari = fakeOtari(() => Response.json(COMPLETION, { headers: SERVED }));
     const ai = await createGateway(CONFIG, otari.fetchImpl).as(null);

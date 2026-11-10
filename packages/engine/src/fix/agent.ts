@@ -222,6 +222,8 @@ export function agentTools(ws: AgentWorkspace) {
 
 export async function runAgent(input: {
   ai: Ai;
+  /** One id for the whole loop (the run's), so Otari keeps every step on one host and its cache. */
+  conversation?: string;
   system: string;
   prompt: string;
   workspace: AgentWorkspace;
@@ -234,7 +236,7 @@ export async function runAgent(input: {
   let last = Date.now();
   try {
     const result = await generateText({
-      ...input.ai.call("fixer", { purpose: "fix" }),
+      ...input.ai.call("fixer", { purpose: "fix", conversation: input.conversation }),
       abortSignal: cancelSignal(),
       system: input.system,
       prompt: input.prompt,

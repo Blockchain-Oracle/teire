@@ -1167,6 +1167,7 @@ async function runLead(input: FixInput): Promise<FixRun> {
         .join("\n\n");
       const agent = await runAgent({
         ai: input.ai,
+        conversation: `fix:${input.runId}`,
         system: requestUpgrade ? `${SYSTEM}\n${UPGRADE_HINT}` : SYSTEM,
         prompt,
         workspace: {
