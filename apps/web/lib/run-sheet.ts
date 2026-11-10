@@ -114,6 +114,11 @@ export interface RunSheetData {
     tokensOut: number;
     latencyMs: number | null;
     costUsd: string;
+    /** Otari's receipt (0028): the model and host that answered, and whether a fallback served it. */
+    servedModel: string | null;
+    provider: string | null;
+    fallback: boolean;
+    requestId: string | null;
     createdAt: string;
   }[];
   reach: { sites: number | null; advisory: boolean };
@@ -277,6 +282,10 @@ export async function runSheet(id: string, after = 0): Promise<RunSheetData | nu
       tokensOut: c.tokensOut,
       latencyMs: c.latencyMs,
       costUsd: c.costUsd,
+      servedModel: c.servedModel,
+      provider: c.provider,
+      fallback: c.fallback,
+      requestId: c.requestId,
       createdAt: c.createdAt.toISOString(),
     })),
     reach: reach.get(reachKey(repo.id, run.groupKey)) ?? { sites: null, advisory: false },
@@ -522,6 +531,10 @@ export async function runSheetTick(
       tokensOut: Number(c.tokens_out ?? 0),
       latencyMs: num(c.latency_ms),
       costUsd: String(c.cost_usd ?? "0"),
+      servedModel: str(c.served_model),
+      provider: str(c.provider),
+      fallback: c.fallback === true,
+      requestId: str(c.request_id),
       createdAt: iso(c.created_at) ?? "",
     })),
   };

@@ -11,7 +11,7 @@ import { type Ai, type GatewayReceipt, receiptOf } from "../gateway";
  * It edits only files the findings located or the compiler names; it never touches manifests,
  * lockfiles, CI or config (the upgrade transaction owns those); `run_check` writes the edits into
  * the after sandbox and runs the repo's own checks with the network off. Tool output is fenced as
- * data. Nemotron 3.5 Super takes over when Ultra is unavailable.
+ * data. Otari falls back to another host (or, with a routing policy, another model) when one is down.
  */
 export interface AgentWorkspace {
   repoDir: string;

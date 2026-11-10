@@ -11,6 +11,10 @@ export interface ReceiptCall {
   tokensOut: number;
   costUsd: string;
   latencyMs: number | null;
+  /** What Otari reports: the model the host ran, the host, and whether a fallback served it. */
+  servedModel?: string | null;
+  provider?: string | null;
+  fallback?: boolean;
 }
 export interface ReceiptExec {
   phase: string;
@@ -41,26 +45,34 @@ export function Receipt({
   execs: ReceiptExec[];
   total: number;
 }) {
-  const byModel = new Map<string, { calls: number; in: number; out: number; cost: number }>();
+  // One row per model and host that answered (Otari's `Otari-Model` and `Otari-Provider`), so a
+  // fallback to another host shows as its own row.
+  const byModel = new Map<
+    string,
+    { calls: number; in: number; out: number; cost: number; fallbacks: number }
+  >();
   for (const c of calls) {
-    const m = byModel.get(c.model) ?? { calls: 0, in: 0, out: 0, cost: 0 };
-    byModel.set(c.model, {
+    const name = (c.servedModel ?? c.model).split("/").pop() ?? c.model;
+    const key = c.provider ? `${name} · ${c.provider}` : name;
+    const m = byModel.get(key) ?? { calls: 0, in: 0, out: 0, cost: 0, fallbacks: 0 };
+    byModel.set(key, {
       calls: m.calls + 1,
       in: m.in + c.tokensIn,
       out: m.out + c.tokensOut,
       cost: m.cost + Number(c.costUsd),
+      fallbacks: m.fallbacks + (c.fallback ? 1 : 0),
     });
   }
   const seconds = (ms: number | null) => (ms === null ? "—" : `${(ms / 1000).toFixed(1)} s`);
   return (
     <div className="mx-auto w-full max-w-xl rounded-lg bg-card p-5 font-mono text-xs leading-6 shadow-card">
       <p className="mb-2 text-center text-muted-foreground">RECEIPT</p>
-      <p className="mb-1 text-muted-foreground">models · Nebius Token Factory</p>
+      <p className="mb-1 text-muted-foreground">models · through Otari</p>
       {byModel.size ? (
         [...byModel].map(([model, m]) => (
           <Row
             key={model}
-            left={`${model.split("/").pop()} ×${m.calls}`}
+            left={`${model} ×${m.calls}${m.fallbacks ? ` · ${m.fallbacks} fallback` : ""}`}
             right={`${m.in.toLocaleString()} in · ${m.out.toLocaleString()} out · $${m.cost.toFixed(4)}`}
           />
         ))

@@ -29,10 +29,14 @@ const ECOSYSTEM_LABEL: Partial<Record<DependencyInstance["ecosystem"], string>> 
  * covered → rollback → commands. Bodies stay under GitHub's 65,536 characters by dropping the
  * inline diff first, then trimming lists.
  */
+/** People's names for the open-weight models Teire's roles run on (ids from Otari's catalog or its hosts). */
 const MODEL_NAMES: [RegExp, string][] = [
-  [/nemotron-3-ultra/i, "NVIDIA Nemotron 3 Ultra"],
-  [/nemotron-3\.5-super/i, "NVIDIA Nemotron 3.5 Super"],
-  [/nemotron-3-super/i, "NVIDIA Nemotron 3 Super"],
+  [/glm-5[.p]3/i, "GLM 5.3"],
+  [/kimi-k2[.p]6/i, "Kimi K2.6"],
+  [/deepseek-v4[.p]1-flash/i, "DeepSeek V4.1 Flash"],
+  [/deepseek-v4-pro/i, "DeepSeek V4 Pro"],
+  [/minimax-m3/i, "MiniMax M3"],
+  [/gpt-oss-120b/i, "gpt-oss-120b"],
 ];
 
 export function modelName(id: string) {
@@ -259,7 +263,7 @@ function footer(runUrl: string | undefined, run: FixRun, extra: (string | undefi
         .map(modelName),
     ),
   ];
-  return `<sub>Teire${runUrl ? ` · [live run](${runUrl})` : ""} · ${models.length ? `${models.join(" and ")} on Nebius Token Factory` : "deterministic fix, no model call"}</sub>`;
+  return `<sub>Teire${runUrl ? ` · [live run](${runUrl})` : ""} · ${models.length ? `${models.join(" and ")} through [Otari](https://otari.ai)` : "deterministic fix, no model call"}</sub>`;
 }
 
 function verificationLines(
@@ -272,9 +276,7 @@ function verificationLines(
 ) {
   const out = ["### Verification"];
   out.push(
-    backendNote.startsWith("Token Factory")
-      ? `${setup} (Token Factory Sandboxes, a microVM per command; the install had the network, the checks had no network interface).`
-      : `${setup} (${backendNote.split(" (")[0]}; registry-only network), then ran the repo's checks with the network off.`,
+    `${setup} (${backendNote.split(" (")[0]}; registry-only network), then ran the repo's checks with the network off.`,
   );
   out.push(`| Check | Before (${before}) | After (${after}) |`, "|---|---|---|");
   for (const c of plan.checks)
@@ -286,16 +288,14 @@ function verificationLines(
   if (run.evidence.kind === "verified") {
     const refused = run.after.deniedHosts.length;
     out.push(
-      backendNote.startsWith("Token Factory")
-        ? "**Proven offline:** the checks passed in microVMs with no network interface at all."
-        : `**Proven offline:** the checks passed with every request refused${
-            refused
-              ? `; ${refused} host${refused === 1 ? "" : "s"} tried and ${refused === 1 ? "was" : "were"} refused (${run.after.deniedHosts
-                  .slice(0, 5)
-                  .map((h) => `\`${h}\``)
-                  .join(", ")})`
-              : ", and none was tried"
-          }.`,
+      `**Proven offline:** the checks passed with every request refused${
+        refused
+          ? `; ${refused} host${refused === 1 ? "" : "s"} tried and ${refused === 1 ? "was" : "were"} refused (${run.after.deniedHosts
+              .slice(0, 5)
+              .map((h) => `\`${h}\``)
+              .join(", ")})`
+          : ", and none was tried"
+      }.`,
     );
   }
   // The other projects the change touches, each with its own checks (D94).
@@ -1167,7 +1167,7 @@ export function composeOnboarding(input: {
     );
   out.push("### How it works here");
   out.push(
-    "Teire reads your lockfiles, compares each package's published API between your version and the target, finds the lines that use what changed, fixes them with NVIDIA Nemotron on Nebius Token Factory, and runs your own typecheck and tests before and after in a sandbox with the network off. A PR is ready only when that verification passes; otherwise it opens as a draft that says what is not covered.",
+    "Teire reads your lockfiles, compares each package's published API between your version and the target, finds the lines that use what changed, fixes them with open-weight models through Otari, and runs your own typecheck and tests before and after in a sandbox with the network off. A PR is ready only when that verification passes; otherwise it opens as a draft that says what is not covered.",
   );
   out.push("### Commands");
   out.push("`@teire rescan` · `@teire pause` · `@teire resume` · `@teire help`");
