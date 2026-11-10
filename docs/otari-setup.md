@@ -83,7 +83,7 @@ falls back across up to five hosts of the same model.
 
 | Policy             | When 80 % of the budget is used                  | Default                                          | On failure, in order                                                                                                                |
 | ------------------ | ------------------------------------------------ | ------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------- |
-| `teire-fixer`      | `deepinfra:moonshotai/Kimi-K2.6`                 | `fireworks:accounts/fireworks/models/glm-5p3`    | `together:zai-org/GLM-5.3`, `mistral:zai-glm-5-3`, `deepinfra:moonshotai/Kimi-K2.6`                                                 |
+| `teire-fixer`      | `deepinfra:deepseek-ai/DeepSeek-V4.1-Flash-1017` | `fireworks:accounts/fireworks/models/glm-5p3`    | `together:zai-org/GLM-5.3`, `mistral:zai-glm-5-3`, `deepinfra:deepseek-ai/DeepSeek-V4-Pro-0813`                                     |
 | `teire-reviewer`   | `deepinfra:deepseek-ai/DeepSeek-V4.1-Flash-1017` | `deepinfra:deepseek-ai/DeepSeek-V4-Pro-0813`     | `together:deepseek-ai/DeepSeek-V4-Pro-0813`, `nebius:deepseek-ai/DeepSeek-V4-Pro-0813`, `together:zai-org/GLM-5.3`                  |
 | `teire-reader`     | `deepinfra:openai/gpt-oss-120b`                  | `deepinfra:deepseek-ai/DeepSeek-V4.1-Flash-1017` | `mistral:deepseek-v4-1-flash-1017`, `fireworks:accounts/fireworks/models/deepseek-v4p1-flash-1017`, `deepinfra:openai/gpt-oss-120b` |
 | `teire-researcher` | `deepinfra:deepseek-ai/DeepSeek-V4.1-Flash-1017` | `deepinfra:MiniMaxAI/MiniMax-M3`                 | `fireworks:accounts/fireworks/models/minimax-m3`, `nebius:MiniMaxAI/MiniMax-M3`, `deepinfra:deepseek-ai/DeepSeek-V4.1-Flash-1017`   |
@@ -95,16 +95,22 @@ As configuration (the dashboard's policy editor takes the same fields):
 teire-fixer:
   select:
     - when: { budget_used_pct: { gte: 80 } }
-      target: deepinfra:moonshotai/Kimi-K2.6
+      target: deepinfra:deepseek-ai/DeepSeek-V4.1-Flash-1017
     - default: fireworks:accounts/fireworks/models/glm-5p3
   on_failure:
     - together:zai-org/GLM-5.3
     - mistral:zai-glm-5-3
-    - deepinfra:moonshotai/Kimi-K2.6
+    - deepinfra:deepseek-ai/DeepSeek-V4-Pro-0813
 ```
 
-Left out on purpose: `together:MiniMaxAI/MiniMax-M3` refuses structured output (400), and
-`nebius:MiniMaxAI/MiniMax-M3` took 42 s for a one-line answer.
+One more policy, `teire-fallback-check`, proves the fallback path: its default is
+`together:MiniMaxAI/MiniMax-M3`, which refuses structured output (400), and its `on_failure` is
+`deepinfra:MiniMaxAI/MiniMax-M3`. `scripts/otari-offerings.ts --policies` calls it and expects
+`Otari-Fallback: true` with two attempts. No role uses it.
+
+Left out on purpose: `together:MiniMaxAI/MiniMax-M3` refuses structured output (400),
+`nebius:MiniMaxAI/MiniMax-M3` took 42 s for a one-line answer, and Kimi K2.6 passed the fix job but
+took 55–109 s per run and timed out at the gateway on the extraction job.
 
 ## 7. Guardrails (Organization → Guardrails)
 

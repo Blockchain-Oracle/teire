@@ -49,8 +49,9 @@ async function probe(selector: string) {
 }
 
 if (process.argv.includes("--policies")) {
-  for (const role of Object.keys(ROLE_DEFAULTS)) {
-    const policy = `teire-${role}`;
+  // teire-fallback-check starts on an offering that refuses structured output: Otari must fall back.
+  for (const policy of [...Object.keys(ROLE_DEFAULTS).map((r) => `teire-${r}`), "teire-fallback-check"]) {
+    const role = policy.replace(/^teire-/, "");
     const r = await probe(policy).then(
       (x) => ({
         ok: true,
