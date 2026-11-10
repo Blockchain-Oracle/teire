@@ -35,10 +35,10 @@ describe("forGitHub", () => {
     expect(out).toContain("page=2");
     expect(
       forGitHub(
-        "see https://teire.vercel.app/runs/0b6a2f1e-1234-4abc-9def-0123456789ab and https://x.dev/app/docs",
+        "see https://teire.84.46.247.92.sslip.io/runs/0b6a2f1e-1234-4abc-9def-0123456789ab and https://x.dev/app/docs",
       ),
     ).toBe(
-      "see https://teire.vercel.app/runs/0b6a2f1e-1234-4abc-9def-0123456789ab and https://x.dev/app/docs",
+      "see https://teire.84.46.247.92.sslip.io/runs/0b6a2f1e-1234-4abc-9def-0123456789ab and https://x.dev/app/docs",
     );
   });
 

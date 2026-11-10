@@ -1,5 +1,20 @@
 /** Every tunable number in one place. Values come from the build plan's decisions. */
 
+/**
+ * This deployment's own addresses. One setting moves the whole instance to another domain: the PR
+ * text, the config schema's `$id`, the bot's User-Agent and the CLI's default catalog all read it.
+ */
+const PUBLIC_URL = (process.env.TEIRE_PUBLIC_URL ?? "https://teire.84.46.247.92.sslip.io").replace(
+  /\/+$/,
+  "",
+);
+export const SITE = {
+  url: PUBLIC_URL,
+  schemaUrl: `${PUBLIC_URL}/schema.json`,
+  configDocsUrl: `${PUBLIC_URL}/docs/config`,
+  sourceUrl: "https://github.com/Blockchain-Oracle/teire",
+} as const;
+
 export const TOKENFACTORY = {
   /** OpenAI-compatible base URL (Token Factory quickstart). */
   defaultBaseUrl: "https://api.tokenfactory.nebius.com/v1/",
@@ -270,7 +285,7 @@ export const GITHUB = {
 } as const;
 
 export const CATALOG = {
-  userAgent: "TeireBot/0.1 (+https://teire.vercel.app; provider change sources)",
+  userAgent: `TeireBot/0.1 (+${PUBLIC_URL}; provider change sources)`,
   fetchTimeoutMs: 20_000,
   /**
    * A provider's change sources are read when a scanned repo uses the provider, and reused by every
@@ -382,7 +397,7 @@ export const GO = {
 /** Rust (plan S06, research generic/rust.md). */
 export const RUST = {
   /** crates.io asks every client to identify itself (403 without a User-Agent). */
-  userAgent: "TeireBot/0.1 (+https://teire.vercel.app; dependency upgrades)",
+  userAgent: `TeireBot/0.1 (+${PUBLIC_URL}; dependency upgrades)`,
   semverChecksVersion: "0.51.0",
   /** rust-analyzer's SCIP index of one project at scan time (fetch, metadata guard, index). */
   scipTimeoutSec: 600,
@@ -447,7 +462,7 @@ export const SANDBOX = {
 
 /** The guarded fetch routine (net/fetch.ts). */
 export const NET = {
-  userAgent: "TeireBot/0.1 (+https://teire.vercel.app)",
+  userAgent: `TeireBot/0.1 (+${PUBLIC_URL})`,
   timeoutMs: 30_000,
   maxRedirects: 5,
   /** Default cap for one response; package tarballs pass their own larger cap. */

@@ -24,7 +24,7 @@ from playwright.sync_api import sync_playwright
 
 ROOT = Path(__file__).resolve().parent.parent
 WEB = ROOT / "apps/web"
-PROD, LOCAL = "https://teire.vercel.app", "http://localhost:3101"
+PROD, LOCAL = os.environ.get("TEIRE_PUBLIC_URL", "https://teire.84.46.247.92.sslip.io"), "http://localhost:3101"
 DESKTOP = {"viewport": {"width": 1920, "height": 1080}, "device_scale_factor": 1}
 README = {"viewport": {"width": 1440, "height": 900}, "device_scale_factor": 1.25}
 PHONE = {"viewport": {"width": 390, "height": 844}, "device_scale_factor": 3, "is_mobile": True, "has_touch": True}

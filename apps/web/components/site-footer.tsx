@@ -5,7 +5,7 @@ import { BrandLogo } from "@/components/brand-logo";
 import { Logo } from "@/components/logo";
 import { systemLine } from "@/lib/app-shell";
 import { SPONSORS, STACK } from "@/lib/brands";
-import { INSTALL_URL, NPM_URL, SOURCE_URL } from "@/lib/site";
+import { INSTALL_URL, SOURCE_URL } from "@/lib/site";
 import { cn } from "@/lib/utils";
 
 const COLUMNS = [
@@ -26,7 +26,6 @@ const COLUMNS = [
       { href: SOURCE_URL, label: "GitHub" },
       { href: "/docs/build/cli", label: "CLI and MCP" },
       { href: "/schema.json", label: "teire.yml schema" },
-      { href: NPM_URL, label: "npm" },
     ],
   },
   {
@@ -82,7 +81,7 @@ export function SiteFooter() {
             className="flex w-fit items-center gap-2 rounded-md border border-rule px-2.5 py-1.5 font-mono text-xs text-ink-2 hover:border-rule-strong hover:text-ink"
           >
             <BrandLogo light={SPONSORS.github.light} dark={SPONSORS.github.dark} alt="" className="h-4" />
-            teire-dev/teire
+            Blockchain-Oracle/teire
           </a>
           <Suspense fallback={<Dot alive={null} label="System status" />}>
             <SystemDot />

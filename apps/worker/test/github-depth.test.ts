@@ -59,7 +59,7 @@ describe("Dashboard issue", () => {
     sha: "abcdef1234",
     scannedAt: new Date("2026-10-25T10:00:00Z"),
     status: "active",
-    webUrl: "https://teire.vercel.app",
+    webUrl: "https://teire.84.46.247.92.sslip.io",
     inventory: [{ ecosystem: "npm", n: 120 }],
     ignores: ["npm:left-pad"],
     configProblems: [".github/teire.yml line 4: upgrades.cooldownDays Invalid input"],

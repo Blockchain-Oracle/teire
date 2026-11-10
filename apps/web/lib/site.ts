@@ -1,8 +1,10 @@
+import { SITE } from "@teire/engine/constants";
+
 /**
  * Links every surface shares. The App's slug is public (it is in its install URL); the GitHub
  * repository is Teire's own source.
  */
-export const APP_SLUG = process.env.GITHUB_APP_SLUG ?? "teire-bot";
+export const APP_SLUG = process.env.GITHUB_APP_SLUG ?? "teire-otari";
 export const INSTALL_URL = `https://github.com/apps/${APP_SLUG}/installations/new`;
 /**
  * GitHub's account picker for the App (Codex walk B11): `installations/new` sends a person whose
@@ -10,8 +12,9 @@ export const INSTALL_URL = `https://github.com/apps/${APP_SLUG}/installations/ne
  * organization they can install it on.
  */
 export const ADD_ACCOUNT_URL = `https://github.com/apps/${APP_SLUG}/installations/select_target`;
-export const SOURCE_URL = "https://github.com/teire-dev/teire";
-export const NPM_URL = "https://www.npmjs.com/package/teire-cli";
+export const SOURCE_URL = SITE.sourceUrl;
+/** The CLI and MCP server ship from this repository; this instance publishes nothing to npm. */
+export const CLI_DOCS_URL = "/docs/build/cli";
 
 export const NAV = [
   { href: "/changes", label: "Changes" },

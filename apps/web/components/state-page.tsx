@@ -15,7 +15,7 @@ import { cn } from "@/lib/utils";
  */
 const contact = (ref?: string) =>
   `${SOURCE_URL}/issues/new?${new URLSearchParams({
-    title: ref ? `Error on teire.vercel.app (ref ${ref})` : "Something on teire.vercel.app",
+    title: ref ? `Error on Teire (ref ${ref})` : "Something on Teire",
     body: ref ? `What I was doing:\n\n\nref ${ref}` : "What I was looking for:\n",
   })}`;
 

@@ -1,5 +1,6 @@
 {
   "name": "teire-cli",
+  "private": true,
   "version": "0.1.3",
   "description": "Teire from the terminal: scan a repository for the dependency and API changes that affect it, gate CI on them, and serve the same tools to coding agents over MCP.",
   "license": "MIT",
@@ -14,10 +15,10 @@
   "engines": {
     "node": ">=22"
   },
-  "homepage": "https://teire.vercel.app",
+  "homepage": "https://github.com/Blockchain-Oracle/teire",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/teire-dev/teire.git",
+    "url": "git+https://github.com/Blockchain-Oracle/teire.git",
     "directory": "packages/cli"
   },
   "keywords": [

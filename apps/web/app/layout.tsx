@@ -1,3 +1,4 @@
+import { SITE } from "@teire/engine/constants";
 import { RootProvider } from "fumadocs-ui/provider/next";
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Newsreader } from "next/font/google";
@@ -19,7 +20,7 @@ const newsreader = Newsreader({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.BETTER_AUTH_URL ?? "https://teire.vercel.app"),
+  metadataBase: new URL(process.env.BETTER_AUTH_URL ?? SITE.url),
   title: {
     default: "Teire: when a package, API or model changes, Teire fixes your code",
     template: "%s · Teire",

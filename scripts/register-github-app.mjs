@@ -1,4 +1,5 @@
-// Registers Teire's GitHub Apps under an organisation (teire-dev by default) with GitHub's manifest flow.
+// Registers this instance's GitHub Apps with GitHub's manifest flow, on a personal account by default
+// (TEIRE_GITHUB_ORG=<org> registers under an organisation instead).
 //   node scripts/register-github-app.mjs
 // Open http://localhost:3999, click a button, approve on GitHub. Credentials are written to
 // .env.local (dev app) or .env.production.local (prod app). Secrets are never printed.
@@ -6,10 +7,13 @@ import { randomBytes } from "node:crypto";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { createServer } from "node:http";
 
-// Your own organisation when you run Teire yourself: TEIRE_GITHUB_ORG=my-org node scripts/register-github-app.mjs
-const ORG = process.env.TEIRE_GITHUB_ORG ?? "teire-dev";
+const ORG = process.env.TEIRE_GITHUB_ORG; // unset: the signed-in personal account
+const OWNER = ORG ?? process.env.TEIRE_GITHUB_USER ?? "Blockchain-Oracle";
+const NEW_APP_URL = ORG
+  ? `https://github.com/organizations/${ORG}/settings/apps/new`
+  : "https://github.com/settings/apps/new";
 const PORT = 3999;
-const PROD_URL = "https://teire.vercel.app";
+const PROD_URL = (process.env.TEIRE_PUBLIC_URL ?? "https://teire.84.46.247.92.sslip.io").replace(/\/+$/, "");
 const DEV_URL = "http://localhost:3000";
 const REDIRECT = `http://localhost:${PORT}/callback`;
 
@@ -24,7 +28,7 @@ const permissions = {
 };
 const events = ["pull_request", "issue_comment", "issues", "push", "check_suite", "repository"];
 const description =
-  "Keeps your code working when the services it depends on change. Finds affected code, fixes it with NVIDIA Nemotron on Nebius Token Factory, proves the fix in a sandbox, and opens a pull request you only have to review.";
+  "Keeps your code working when the packages, APIs and models it depends on change. Finds the affected code, fixes it with open-weight models through Otari, proves the fix with your own tests, and opens a pull request you only have to review.";
 
 async function smeeChannel() {
   const res = await fetch("https://smee.io/new", { redirect: "manual" });
@@ -37,7 +41,7 @@ const apps = {
   prod: {
     file: ".env.production.local",
     manifest: {
-      name: ORG === "teire-dev" ? "Teire Bot" : `Teire (${ORG})`,
+      name: process.env.TEIRE_APP_NAME ?? "Teire Otari",
       url: PROD_URL,
       description,
       hook_attributes: { url: `${PROD_URL}/api/github/webhooks`, active: true },
@@ -55,8 +59,8 @@ const apps = {
     file: ".env.local",
     manifest: {
       // App names are unique across GitHub; another organisation gets its own.
-      name: ORG === "teire-dev" ? "Teire Bot Dev" : `Teire Dev (${ORG})`,
-      url: `https://github.com/${ORG}/teire`,
+      name: `${process.env.TEIRE_APP_NAME ?? "Teire Otari"} Dev`,
+      url: `https://github.com/${OWNER}/teire`,
       description: `${description} (development app)`,
       hook_attributes: { url: smeeUrl, active: true },
       redirect_url: REDIRECT,
@@ -94,7 +98,7 @@ function manifestForm(key) {
   const state = randomBytes(16).toString("hex");
   states.set(state, key);
   const manifest = JSON.stringify(app.manifest).replace(/"/g, "&quot;");
-  return `<form id="${key}" method="post" action="https://github.com/organizations/${ORG}/settings/apps/new?state=${state}">
+  return `<form id="${key}" method="post" action="${NEW_APP_URL}?state=${state}">
 <input type="hidden" name="manifest" value="${manifest}"><button>Create “${app.manifest.name}”</button></form>`;
 }
 
@@ -112,7 +116,7 @@ createServer(async (req, res) => {
     res.writeHead(200, { "content-type": "text/html" });
     res.end(
       page(
-        `<h1>Register Teire's GitHub Apps</h1><p>Org: <code>${ORG}</code>. Create both; credentials go straight into the env files.</p>${forms}`,
+        `<h1>Register Teire's GitHub Apps</h1><p>Owner: <code>${OWNER}</code>. Create both; credentials go straight into the env files.</p>${forms}`,
       ),
     );
     return;

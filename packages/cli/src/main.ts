@@ -1,6 +1,7 @@
 import "./env";
 import { existsSync } from "node:fs";
 import { parseArgs } from "node:util";
+import { SITE } from "@teire/engine/constants";
 import { catalogUrl, changesFor, findChange } from "./catalog";
 import { serveMcp } from "./mcp";
 import { groupFindings, renderChange, renderScan, scanJson } from "./render";
@@ -38,9 +39,9 @@ Environment (all optional)
   GITHUB_TOKEN           Higher GitHub rate limits (release notes, advisories, private repositories)
   TOKENFACTORY_API_KEY   Trace model IDs kept in config or registries with Nemotron, as the service does
   TAVILY_API_KEY         Find the notices of an API host Teire has not discovered yet
-  TEIRE_URL              Another Teire deployment (default https://teire.vercel.app)
+  TEIRE_URL              Another Teire deployment (default ${SITE.url})
 
-Docs: https://teire.vercel.app/docs/build/cli
+Docs: ${SITE.url}/docs/build/cli
 `;
 
 function fail(message: string): never {

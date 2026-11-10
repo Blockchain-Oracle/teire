@@ -88,7 +88,7 @@ describe("upstream text in PR bodies", () => {
     expect(blockquote("a\nb")).toBe("> a\n> b");
   });
   it("cuts a long body at whole blocks, closes an open <details>, and says so", () => {
-    const run = "https://teire.vercel.app/runs/1";
+    const run = "https://teire.84.46.247.92.sslip.io/runs/1";
     const body = `${"a".repeat(50)}\n\n${"b".repeat(200)}`;
     const out = fitBody(body, 220, run);
     expect(out.startsWith("a".repeat(50))).toBe(true);
@@ -128,7 +128,7 @@ describe("needs-a-human issues", () => {
         },
       ],
       records: [],
-      webUrl: "https://teire.vercel.app/app/repos/teire-lab/coal",
+      webUrl: "https://teire.84.46.247.92.sslip.io/app/repos/teire-lab/coal",
     });
     expect(title).toBe("Teire needs a human: rack: header injection");
     expect(body).toContain("no fixed version is published");
@@ -184,11 +184,11 @@ describe("onboarding upgrades", () => {
 describe("the body's flow image and folds", () => {
   it("links the run's image to the run page, and draws none without a page", () => {
     const id = "6611b070-513d-4a06-8bc4-ff8e964a9fd8";
-    expect(runFlowImage(`https://teire.vercel.app/runs/${id}`)).toBe(
-      `[![The run as Teire drew it: the change, your code, the fix, your checks before and after, and this outcome](https://teire.vercel.app/og/run/${id}?v=2)](https://teire.vercel.app/runs/${id})`,
+    expect(runFlowImage(`https://teire.84.46.247.92.sslip.io/runs/${id}`)).toBe(
+      `[![The run as Teire drew it: the change, your code, the fix, your checks before and after, and this outcome](https://teire.84.46.247.92.sslip.io/og/run/${id}?v=2)](https://teire.84.46.247.92.sslip.io/runs/${id})`,
     );
     expect(runFlowImage(undefined)).toBeNull();
-    expect(runFlowImage("https://teire.vercel.app/runs/not-a-run")).toBeNull();
+    expect(runFlowImage("https://teire.84.46.247.92.sslip.io/runs/not-a-run")).toBeNull();
   });
 
   it("folds only the checking sections, keeps their tables whole, and stops at the next heading", () => {

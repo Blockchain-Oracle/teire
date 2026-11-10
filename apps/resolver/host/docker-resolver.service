@@ -1,6 +1,6 @@
 [Unit]
 Description=Teire resolver Docker daemon (gVisor runtime, no iptables, own bridge)
-Documentation=https://github.com/teire-dev/teire/tree/main/apps/resolver
+Documentation=https://github.com/Blockchain-Oracle/teire/tree/main/apps/resolver
 After=network-online.target containerd.service docker.service
 Wants=network-online.target
 Requires=containerd.service

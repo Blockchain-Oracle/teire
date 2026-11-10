@@ -22,10 +22,15 @@ const PORT = Number(process.env.PORT ?? 8080);
 const databaseUrl = process.env.DATABASE_URL;
 const caCert = process.env.DATABASE_CA_CERT;
 if (!databaseUrl) throw new Error("DATABASE_URL is not set");
-// TLS with a pinned CA everywhere, except a database on this machine (running Teire locally).
+// TLS with a pinned CA everywhere, except a database on this machine (running Teire locally) or a
+// database on the host's private container network, opted into with DATABASE_TLS=off: its port is
+// never published, so the traffic never leaves the host.
 const local = !caCert && /@(localhost|127\.0\.0\.1)[:/]/.test(databaseUrl);
-if (!caCert && !local)
-  throw new Error("DATABASE_CA_CERT is not set (only a localhost database may go without TLS)");
+const privateNetwork = !caCert && process.env.DATABASE_TLS === "off" && /@[a-z0-9-]+[:/]/.test(databaseUrl);
+if (!caCert && !local && !privateNetwork)
+  throw new Error(
+    "DATABASE_CA_CERT is not set (only a localhost database, or a private-network one with DATABASE_TLS=off, may go without TLS)",
+  );
 
 const { db, pool } = caCert
   ? createDb({ connectionString: databaseUrl, caCert })

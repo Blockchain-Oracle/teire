@@ -100,7 +100,7 @@ export class Egress extends WorkerEntrypoint<Env, EgressProps> {
     if (tarball && read && request.url === tarball.url) {
       // GitHub answers with a redirect to a signed codeload URL; follow it here so the token and
       // the signed URL stay outside the sandbox.
-      const headers = new Headers({ "user-agent": "teire-sandbox" });
+      const headers = new Headers({ "user-agent": "teire-otari-sandbox" });
       if (tarball.token) headers.set("authorization", `Bearer ${tarball.token}`);
       return fetch(request.url, { headers, redirect: "follow" });
     }

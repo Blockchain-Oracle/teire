@@ -1,4 +1,4 @@
-import { PR_MODE_BY_EVIDENCE, PULL_REQUESTS } from "../constants";
+import { PR_MODE_BY_EVIDENCE, PULL_REQUESTS, SITE } from "../constants";
 import type { ChangeV2, Coverage, DependencyInstance } from "../contract";
 import { usageCell } from "../fix/co-moved";
 import type { MigrationNote } from "../fix/codemods";
@@ -948,9 +948,9 @@ export interface OnboardingRow {
  * each comment, as Biome and Prettier format YAML, so the PR passes the repository's own format check
  * (teire-dev/teire#1 failed on aligned comments).
  */
-export const DEFAULT_CONFIG = `# yaml-language-server: $schema=https://teire.vercel.app/schema.json
+export const DEFAULT_CONFIG = `# yaml-language-server: $schema=${SITE.schemaUrl}
 # Teire configuration. Every key is optional; these are the defaults.
-# Reference: https://teire.vercel.app/docs/config
+# Reference: ${SITE.configDocsUrl}
 upgrades:
   majors: true # open upgrade PRs across major versions
   plainBumps: true # open verified upgrades with no code change (last in the queue)

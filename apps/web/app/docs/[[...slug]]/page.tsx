@@ -1,3 +1,4 @@
+import { SITE } from "@teire/engine/constants";
 import {
   DocsBody,
   DocsDescription,
@@ -14,7 +15,7 @@ import { getMDXComponents } from "@/components/mdx";
 import { SOURCE_URL } from "@/lib/site";
 import { getPageImage, getPageMarkdownUrl, source } from "@/lib/source";
 
-const SITE_URL = "https://teire.vercel.app";
+const SITE_URL = SITE.url;
 
 /**
  * The slug is URL data, so the page reads it inside Suspense: the docs bar and sidebar (the layout)

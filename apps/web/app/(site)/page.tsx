@@ -8,7 +8,6 @@ import { MiniFlow } from "@/components/flow/mini-flow";
 import { Connector } from "@/components/flow/static-flow";
 import { TileLabel, TileSquare } from "@/components/flow/tile";
 import { GithubMark } from "@/components/icons";
-import { CopyCommand } from "@/components/landing/copy-command";
 import { ProofCard } from "@/components/landing/proof-card";
 import { Reveal, ScrollSpine } from "@/components/landing/scroll-flow";
 import { Button } from "@/components/ui/button";
@@ -18,7 +17,7 @@ import hero from "@/lib/landing/hero-run.json";
 import { CURATED, providerLogo } from "@/lib/logos";
 import { subjectMark } from "@/lib/marks";
 import type { Proof } from "@/lib/proof";
-import { INSTALL_URL, NPM_URL } from "@/lib/site";
+import { CLI_DOCS_URL, INSTALL_URL } from "@/lib/site";
 import { cn } from "@/lib/utils";
 
 export const metadata = {
@@ -103,13 +102,12 @@ export default function Home() {
               </Button>
             </div>
             <div className="hidden flex-wrap items-center gap-4 sm:flex">
-              <CopyCommand command="npx teire-cli scan" tone="hero" />
               <a
-                href={NPM_URL}
+                href={CLI_DOCS_URL}
                 className="inline-flex items-center gap-2 text-sm text-hero-ink-2 transition-colors hover:text-hero-ink"
               >
                 <BrandLogo light={ECOSYSTEMS.npm.dark} alt="" className="h-4" />
-                View teire-cli on npm
+                The CLI and MCP server
                 <ArrowUpRight className="size-3.5" />
               </a>
             </div>
@@ -415,10 +413,9 @@ export default function Home() {
               <Link href="/scan">Scan a repo</Link>
             </Button>
           </div>
-          <CopyCommand command="npx teire-cli scan" />
-          <a href={NPM_URL} className="inline-flex items-center gap-2 text-sm text-link hover:underline">
+          <a href={CLI_DOCS_URL} className="inline-flex items-center gap-2 text-sm text-link hover:underline">
             <BrandLogo light={ECOSYSTEMS.npm.light} alt="" className="h-4" />
-            Get teire-cli on npm <ArrowUpRight className="size-3.5" />
+            The CLI and MCP server <ArrowUpRight className="size-3.5" />
           </a>
           <nav aria-label="How Teire runs" className="flex flex-wrap justify-center gap-2 pt-2">
             {[

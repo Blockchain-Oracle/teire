@@ -1,4 +1,5 @@
 import { CONFIG_PR_KEYS, type ConfigPrKey, isValidConfigText, setConfigKey } from "@teire/engine/config";
+import { SITE } from "@teire/engine/constants";
 import { branchFor, commitToBranch, DEFAULT_CONFIG, openOrUpdatePullRequest } from "@teire/engine/github";
 import { type getRepo, upsertArtifact } from "../store";
 import type { WorkerContext } from "./scan";
@@ -104,7 +105,7 @@ export async function configPr(
                   .map((x) => `\`${x}\``)
                   .join(", ") || "an empty list"
               : `\`${String(params.value)}\``
-          } in \`${path}\`. The other keys and the comments are kept (YAML spacing may be tidied), and the result is checked against [the schema](https://teire.vercel.app/schema.json).`,
+          } in \`${path}\`. The other keys and the comments are kept (YAML spacing may be tidied), and the result is checked against [the schema](${SITE.schemaUrl}).`,
       "Merging it is what changes the setting: Teire reads the file at the next scan.",
       `<sub>Commit ${commit.oid.slice(0, 7)}.</sub>`,
     ].join("\n\n"),

@@ -9,7 +9,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-const ORIGIN = "https://teire.vercel.app";
+const ORIGIN = (process.env.TEIRE_PUBLIC_URL ?? "https://teire.84.46.247.92.sslip.io").replace(/\/+$/, "");
 const HERO = "d1b0c4d8-a46e-4e9d-b057-30b6d12be23b";
 /** The other real PRs that hang off the PR station (model retirement, a Nemotron major, advisories). */
 const MORE = [

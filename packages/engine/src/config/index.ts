@@ -1,6 +1,6 @@
 import { LineCounter, type Node, parseDocument } from "yaml";
 import { z } from "zod";
-import { PULL_REQUESTS, REGISTRY } from "../constants";
+import { PULL_REQUESTS, REGISTRY, SITE } from "../constants";
 import type { RepoTree } from "../inventory/tree";
 import type { DependabotConfig } from "../resolver/config";
 
@@ -120,7 +120,7 @@ export const teireConfigSchema = z
 
 /** The JSON Schema editors read (`# yaml-language-server: $schema=…/schema.json`). */
 export const teireConfigJsonSchema = {
-  $id: "https://teire.vercel.app/schema.json",
+  $id: SITE.schemaUrl,
   title: "Teire configuration (.github/teire.yml)",
   ...z.toJSONSchema(teireConfigSchema),
 };

@@ -1,6 +1,6 @@
-# yaml-language-server: $schema=https://teire.vercel.app/schema.json
+# yaml-language-server: $schema=https://teire.84.46.247.92.sslip.io/schema.json
 # Teire configuration. Every key is optional; these are the defaults.
-# Reference: https://teire.vercel.app/docs/config
+# Reference: https://teire.84.46.247.92.sslip.io/docs/config
 upgrades:
   majors: true # open upgrade PRs across major versions
   plainBumps: true # open verified upgrades with no code change (last in the queue)

@@ -28,7 +28,7 @@ import { getSession } from "./session";
  * person's chosen installation (its private repositories included, since GitHub said they can see
  * them), or the kit's public teire-dev repositories. Read through the web's read-only role.
  */
-export const KIT_ACCOUNT = "teire-dev";
+export const KIT_ACCOUNT = process.env.TEIRE_KIT_ACCOUNT ?? "Blockchain-Oracle";
 
 /** Which repositories a page reads: one installation (by id or account) and whether private ones count. */
 export interface Scope {

@@ -1,5 +1,5 @@
 import type { Octokit } from "octokit";
-import { PR_MODE_BY_EVIDENCE, PULL_REQUESTS } from "../constants";
+import { PR_MODE_BY_EVIDENCE, PULL_REQUESTS, SITE } from "../constants";
 import type { CallSite } from "../contract";
 
 /** The label on a Teire PR whose base moved while fixes were Off: its evidence is from an older base (D125). */
@@ -225,7 +225,7 @@ export async function publishConfigCheckRun(input: {
         ? input.issues
             .map((i) => `- \`${i.file}\` line ${i.line}: ${i.path ? `\`${i.path}\` ` : ""}${i.message}`)
             .join("\n")
-        : "Every key matched the schema (https://teire.vercel.app/schema.json).",
+        : `Every key matched the schema (${SITE.schemaUrl}).`,
       annotations: input.issues
         .filter((i) => !i.file.includes("teire-config/"))
         .slice(0, 50)

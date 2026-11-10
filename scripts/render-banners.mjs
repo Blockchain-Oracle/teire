@@ -1,6 +1,6 @@
 // The README and organisation-profile banners (light and dark, 2560×1280): Teire's mark and motto
 // beside the live run page of a real Teire fix (teire-dev/examples PR #30, zod 3.25.76 → 4.6.6,
-// proven), captured from teire.vercel.app in the same theme. Rerun when the product changes.
+// proven), captured from this instance in the same theme. Rerun when the product changes.
 //
 // Run (playwright-core and a Chromium build, not a dependency of this repo):
 //   PLAYWRIGHT_FROM=/path/with/node_modules/ CHROMIUM=/path/to/chrome node scripts/render-banners.mjs
@@ -11,7 +11,8 @@ import { join } from "node:path";
 const { chromium } = createRequire(process.env.PLAYWRIGHT_FROM ?? import.meta.url)("playwright-core");
 const ROOT = new URL("..", import.meta.url).pathname;
 const OUT = join(ROOT, ".github/assets");
-const RUN = "https://teire.vercel.app/runs/d1b0c4d8-a46e-4e9d-b057-30b6d12be23b";
+const RUN = process.env.TEIRE_BANNER_RUN; // a live run page URL on this instance
+if (!RUN) throw new Error("Set TEIRE_BANNER_RUN to a run page URL");
 const svg = (name) =>
   `data:image/svg+xml;base64,${readFileSync(join(ROOT, "apps/web/public/logos", name)).toString("base64")}`;
 const MARK = `data:image/svg+xml;base64,${readFileSync(join(ROOT, ".github/assets/brand/teire-logo.svg")).toString("base64")}`;

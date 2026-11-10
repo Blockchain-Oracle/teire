@@ -11,9 +11,12 @@ export function database() {
   if (!instance) {
     const connectionString = process.env.DATABASE_URL;
     const caCert = process.env.DATABASE_CA_CERT;
-    // Development only: a throwaway local Postgres without TLS. Production always verifies the CA.
-    if (connectionString && !caCert && process.env.NODE_ENV === "development")
-      instance = createLocalDb(connectionString);
+    // Without TLS: a throwaway local Postgres in development, or the database on the host's private
+    // container network (DATABASE_TLS=off; its port is never published). Otherwise verify the CA.
+    const privateNetwork =
+      process.env.DATABASE_TLS === "off" && !!connectionString && /@[a-z0-9-]+[:/]/.test(connectionString);
+    if (connectionString && !caCert && (process.env.NODE_ENV === "development" || privateNetwork))
+      instance = createLocalDb(connectionString, 3);
     else {
       if (!connectionString || !caCert) throw new Error("DATABASE_URL and DATABASE_CA_CERT must be set");
       // Every instance draws on `teire_web`'s one connection limit, and live pages poll it: few

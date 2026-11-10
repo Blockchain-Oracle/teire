@@ -1,4 +1,5 @@
 import type { PageReader, ProviderRecord } from "@teire/engine/catalog";
+import { SITE } from "@teire/engine/constants";
 import type { ChangeV2 } from "@teire/engine/contract";
 import { liveProviderChanges, type ProviderChanges } from "@teire/engine/pipeline";
 import { PROVIDERS, providerBySlug } from "@teire/engine/providers";
@@ -9,7 +10,7 @@ import type { RegistryCache } from "@teire/engine/registry";
  * provider's pages behind its quote gate, and the providers it reads. The CLI and the MCP server
  * read it first; `TEIRE_URL` points at another deployment.
  */
-export const DEFAULT_URL = "https://teire.vercel.app";
+export const DEFAULT_URL = SITE.url;
 
 export function catalogUrl() {
   return (process.env.TEIRE_URL ?? DEFAULT_URL).replace(/\/$/, "");
