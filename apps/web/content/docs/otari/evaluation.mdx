@@ -1,0 +1,58 @@
+---
+title: Evaluation
+description: How the five models were picked. Six open-weight models from Otari's catalog ran Teire's real fix job and extraction job three times each, through Otari, and every host offering was probed with a structured-output request.
+icon: FlaskConical
+---
+
+Measured 2026-11-10 with `scripts/compare-models.ts` and `scripts/otari-offerings.ts`, every call through Otari and billed to Teire's key.
+
+## The fix job
+
+The fixer's real loop on a small repository with a breaking upgrade and decoy files it must not touch. Three runs per model; "passed" means the repository's own checks passed after the fix, with no decoy touched.
+
+| Model | Passed | Cost per run | Time | Host that answered |
+|---|---|---|---|---|
+| DeepSeek V4.1 Flash | 3/3 | $0.0002–0.0003 | 4–6 s | deepinfra |
+| MiniMax M3 | 3/3 | $0.0016 | 37 s | deepinfra |
+| DeepSeek V4 Pro | 3/3 | $0.0027–0.0045 | 6–13 s | deepinfra |
+| Kimi K2.6 | 3/3 | $0.005–0.007 | 55–109 s | deepinfra |
+| GLM 5.3 | 3/3 | $0.011–0.014 | 20 s | fireworks |
+| gpt-oss-120b | 0/3 | — | — | — |
+
+On a small job every model but gpt-oss passes. GLM 5.3 writes the fixes because it is the strongest coder of the set on long agent loops with many files; DeepSeek V4 Pro reviews, a second family checking the first. Kimi passed but took up to two minutes a run and timed out at the gateway on the extraction job.
+
+## The extraction job
+
+Reading real release notes into migration notes, where every note must quote the fetched text word for word.
+
+| Model | Quotes found verbatim | Cost | Time |
+|---|---|---|---|
+| DeepSeek V4.1 Flash | 29 of 29 (29 of 33 rows) | $0.0006 | 6–8 s |
+| GLM 5.3 | 0 verbatim | $0.066–0.086 | slow |
+
+DeepSeek V4.1 Flash is the only model that quoted every row word for word, and the cheapest: it is the reader.
+
+## Hosts
+
+Otari lists several hosts for each model. Each of the 23 offerings of the six models got one small JSON-schema request:
+
+- 21 answered with valid structured output.
+- Together's MiniMax M3 refuses structured output (400).
+- Two offerings have no chat endpoint.
+
+Roles send catalog ids, so Otari only picks among offerings that serve the request, and falls back across up to five of them.
+
+## The researcher
+
+The same zod 3 → 4 question (three APIs) with search and fetch capped at two each:
+
+| Model | Time | Cost | Changes, each with a source |
+|---|---|---|---|
+| MiniMax M3 | 34 s | $0.035 | 3 of 3 |
+| DeepSeek V4.1 Flash | 15 s | $0.042 | 3 of 3 |
+
+Both found all three changes from zod's own migration guide. MiniMax M3 is the researcher: a third model family, and slightly cheaper.
+
+## Cost in production
+
+From the first 34 calls on the demo repositories: a review cost $0.0006 on average, reading notes $0.00009, an install triage $0.00053, and a plain swap run $0.0005 at the median ($0.0021 at most). These set the [allowances](/docs/otari/allowances).

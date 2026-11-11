@@ -1,0 +1,39 @@
+---
+title: Receipts
+description: Every model call is recorded with what Otari reports for it, the model and host that answered, any fallback, the guardrail verdicts, the end user it was billed to and its real cost, and shown on the run and in the PR.
+icon: Receipt
+---
+
+## What Otari reports, and Teire keeps
+
+Each response from Otari carries its own receipt, and Teire stores it on the call's row:
+
+| From Otari | Kept as |
+|---|---|
+| `Otari-Request-Id` | the request id, to look up the settled cost later |
+| `Otari-Model`, `Otari-Provider` | the model and host that actually answered |
+| `Otari-Fallback`, `Otari-Attempt-Count` | whether Otari fell back to another host, and after how many attempts |
+| `Otari-Guardrails` | each guardrail's verdict |
+| `Otari-End-User-Budget` | the budget the call was billed to |
+| `usage.cost_usd` | the call's cost, as Otari charged it |
+| `otari_tool_calls` | the searches, fetches, MCP calls and code runs Otari ran in its own loop |
+
+Teire keeps no price list: the cost is Otari's.
+
+## What is recorded
+
+| Purpose | When |
+|---|---|
+| `fix` | Each step of the fixer |
+| `review` | The review of a passing fix, of a plain bump, and why a failed install failed |
+| `notes` | Reading an upgrade's release notes |
+| `research` | The researcher's call in Otari's tool loop |
+| `triage` | Tracing wrapped model IDs during a scan |
+| `provider-page` | Reading a discovered provider's pages |
+
+## Where you see it
+
+- **The PR's Receipt section** lists each step with its model, tokens and cost, the research with its pages and MCP calls, then the sandbox time and the model total. A fix made by a plain swap says "deterministic fix, no model call" and costs $0.
+- **The run page** shows which model answered each step, on which host, and "after a fallback" when Otari moved to another host.
+- **Settings › Usage** adds up runs, tokens, model cost and sandbox time across your repositories, beside your [allowances](/docs/otari/allowances).
+- **The [trust page](/trust)** shows model spend today and this week, the calls and cost per model, and what is left of Teire's ceiling on Otari.

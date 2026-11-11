@@ -1,0 +1,47 @@
+---
+title: Allowances
+description: Each person and each installation has its own AI allowance, kept by Otari. Work checks it before starting, waits for its own reset when it runs out, and never stops anyone else's.
+icon: Wallet
+---
+
+Teire never counts money itself. Every model call names who it is for, as an end user of Teire's Otari service key, and Otari puts each end user on a budget, adds up what it spends, holds what running calls may still spend, and refuses a call whose hold doesn't fit.
+
+## The budgets
+
+| Budget | Amount | Resets | Who is on it |
+|---|---|---|---|
+| `teire-person-daily` | $0.50 | daily, 00:00 UTC | every signed-in person (the default) |
+| `teire-installation-daily` | $3.00 | daily, 00:00 UTC | every installation of the GitHub App |
+| `teire-catalog-daily` | $1.00 | daily, 00:00 UTC | Teire's shared reading of provider pages |
+| `teire-operator-daily` | $2.00 | weekly, Monday 00:00 UTC | the operator's scripted walk |
+| `teire-walk-tiny` / `teire-walk-raised` | $0.02 / $1.00 | daily | the demo walk: a person who runs out, then the same person raised |
+
+Above them, Teire's whole key has a ceiling, so all the allowances together can never spend more than it.
+
+## Before work starts
+
+Otari holds a call's prompt and its full output limit until the call settles. So before work starts, Teire reads the payer's allowance from Otari (`GET /end-users`, `GET /end-user-budgets`) and starts only when what is left covers what the work may hold at once:
+
+| Work | Needs left |
+|---|---|
+| A fix run (two fixer steps of 16,000 output tokens) | $0.15 |
+| A scan's model reading | $0.03 |
+| An Ask Teire reply (up to 8 small steps) | $0.025 |
+
+When it doesn't fit:
+
+- **Ask Teire** answers with the reason and the time it comes back, for example "Your AI allowance has $0.020 of $0.02 left, less than this needs to start ($0.025); it comes back at 00:00 UTC", with docs results beside it. No model is called.
+- **A fix run** waits with **waiting for this installation's AI allowance** (or **your AI allowance** for a dry run) and starts again by itself a minute after the reset.
+- **A scan** skips its model reading and says why; everything it found without a model is kept.
+
+If Otari refuses a call in the middle of a run anyway (`403 budget_exceeded`), the run stops cleanly, keeps what it did, and waits for the reset Otari names in `Retry-After`. An empty Otari balance (`402`) pauses every run until it is topped up.
+
+## Where you see it
+
+- **Settings › Allowances** shows your allowance and your installation's as meters: spent, held by calls running now, what is left and when it resets.
+- **Settings › Usage** and Ask Teire's usage card show the same meters beside the spend from the receipts.
+- **The [trust page](/trust)** shows what is left of Teire's ceiling.
+
+## The operator
+
+Teire's operators (`TEIRE_OPERATOR_GITHUB_IDS`) also see, under Settings › Allowances, Teire's ceiling, every budget with how many end users it holds, and every end user with its budget, spend and reset. They can **move** an end user to another of the key's budgets (`PUT /end-users`, which restarts its period) or **pause** it (`PATCH /end-users`, `blocked`), both on Otari. A person or installation that hasn't made a call yet is listed too, so it can be put on a budget before its first call.

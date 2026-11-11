@@ -1,0 +1,70 @@
+---
+title: Teire on Otari
+description: Every model call Teire makes goes through Otari, Mozilla.ai's AI gateway. Five open-weight models do five jobs, each person and installation has its own allowance there, and every receipt says which model and host answered.
+icon: Cpu
+---
+
+<BuiltOn />
+
+Teire sends every model call to [Otari](https://otari.ai) (`https://api.otari.ai/api/v1`), an OpenAI-compatible gateway, through the AI SDK. One service key covers the whole instance. Otari picks a host for each model, falls back to another host when one fails, bills each call to the person or installation it is for, runs Teire's guardrail on the pages Teire reads, and reports what it ran on every response.
+
+## Five jobs, five open-weight models
+
+| Role | Model | What it does | Override |
+|---|---|---|---|
+| fixer | GLM 5.3 (`z-ai/glm-5.3`) | Edits code in the agent loop until your checks pass | `TEIRE_MODEL_FIXER` |
+| reviewer | DeepSeek V4 Pro | Reviews a passing fix, a plain bump, and why an install broke | `TEIRE_MODEL_REVIEWER` |
+| reader | DeepSeek V4.1 Flash | Reads release notes and provider pages into quoted notes; traces wrapped model IDs; shapes the research brief | `TEIRE_MODEL_READER` |
+| researcher | MiniMax M3 | Before a fix, searches the web, reads the migration guide and the target's docs, and writes a brief with its sources | `TEIRE_MODEL_RESEARCHER` |
+| assistant | gpt-oss-120b | Ask Teire's chat | `TEIRE_MODEL_ASSISTANT` |
+
+Each role sends a catalog id, so Otari chooses among that model's hosts by price, health and latency and falls back to the next host on a failure. An override can be another catalog id, a pinned `provider:model` selector, or the name of a routing policy. The models were picked by measuring them on Teire's own jobs: see [Evaluation](/docs/otari/evaluation).
+
+## Who pays
+
+Every call names who it is for, as an end user of Teire's service key, and Otari keeps each one's allowance:
+
+| Work | Billed to |
+|---|---|
+| Ask Teire, public scans, dry runs | the signed-in person (`gh:<GitHub id>`) |
+| Scans, fix runs, CI repair, re-verify on an installed repository | the installation (`inst:<id>`) |
+| Reading a provider's pages, shared by every repository | Teire's catalog reader (`teire:catalog`) |
+
+A person who runs out is told when it comes back, and nobody else's work stops. See [Allowances](/docs/otari/allowances).
+
+## What Otari does on each call
+
+| Otari feature | Where Teire uses it |
+|---|---|
+| End users and budgets | Every call is billed to a person or an installation; work waits for its own allowance |
+| Spend ceiling | Teire's whole key has a ceiling; the trust page shows what is left |
+| Automatic provider selection and fallback | Every role; the receipt says "after a fallback" with the attempt count |
+| `Otari-Conversation-Id` | Every step of a fix run and every Ask Teire thread stays on one host, so its prompt cache is reused |
+| Web search and web fetch | The researcher, and discovery of a new provider's deprecation pages |
+| MCP | The researcher reads the target's docs through Context7; Ask Teire's docs mode reads Teire's own [MCP server](/docs/otari/research#teires-mcp-server) |
+| Code execution | The researcher installs both versions of a Python package in Otari's sandbox and prints the signatures the repository calls |
+| Guardrails | Release notes, vendor pages and the research brief pass Teire's prompt-injection guardrail, run by Otari before any model reads them |
+
+## The fixer's tools
+
+| Tool | What it does |
+|---|---|
+| `read_file` | Read a file in the repository, with line numbers. Refuses `.env*`, `.git/`, `node_modules/`, keys, and files over 192 KB |
+| `search` | Regex over the source files, up to 60 hits |
+| `edit_file` | Replace one exact text that occurs once, only in allowed files |
+| `run_check` | Write the edits into the sandbox and run your checks with the network off |
+| `lookup_docs` | The target version's documentation, per ecosystem |
+| `request_upgrade` | Ask dependabot-core's updater to move another dependency the repository declares, when the upgrade needs it too. At most two per run |
+| `update_plan` | Set the few steps it intends, and mark them done |
+| `finish` | Explain the change for the PR |
+
+The fixer may edit only the files the change reaches and the files your check output names. It never touches manifests, lockfiles, config or CI. It must not delete, skip or weaken tests, or add new `any`, casts or type-ignore comments. File contents, docs, check output and the research brief are handed to it as data, never as instructions.
+
+Each attempt has up to 24 steps and each step can write up to 16,000 tokens; each change gets up to 4 attempts. After 2 failed verifications the code is reset and the fixer starts over with a written plan, seeing what failed before. When an attempt passes, the reviewer reads the diff for real problems only (behaviour replaced by a hard-coded rule, a validator or type widened, tests deleted or skipped, the quoted replacement ignored), and the fixer gets one more attempt to address them.
+
+<Cards>
+  <Card title="Allowances" href="/docs/otari/allowances" />
+  <Card title="Research, MCP and guardrails" href="/docs/otari/research" />
+  <Card title="Receipts" href="/docs/otari/receipts" />
+  <Card title="Evaluation" href="/docs/otari/evaluation" />
+</Cards>

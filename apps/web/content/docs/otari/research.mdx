@@ -1,0 +1,62 @@
+---
+title: Research, MCP and guardrails
+description: Before the fixer starts, a researcher reads the change through Otari's web search, fetch and MCP tools, and proves Python API changes in Otari's code sandbox. Every page Teire reads passes a prompt-injection guardrail that Otari runs first.
+icon: Telescope
+---
+
+## The researcher
+
+A fix run that the deterministic edits didn't finish reaches the fixer, and before the fixer starts, the researcher (MiniMax M3) runs one call in Otari's own tool loop:
+
+1. **Search** the web (Otari's `otari_web_search`, at most two searches) for the package's release notes and migration guide.
+2. **Fetch** the best pages (`otari_web_fetch`, at most two).
+3. **Read the target version's docs** through the [Context7](https://context7.com) MCP server, named in the request (`mcp_servers`), when the Otari workspace lets requests name MCP servers.
+4. Write what changed for the APIs your code calls, with before and after.
+
+The reader (DeepSeek V4.1 Flash) then turns that prose into a brief: a summary, each changed API with before and after, and its source. A source must be a page Otari's tools actually returned in the loop; anything else is dropped. A plain version bump that the deterministic edits finished is never researched.
+
+### Code proof for Python packages
+
+For a PyPI upgrade, Teire also runs a short script in **Otari's code sandbox** (`POST /code/execute`, Python 3.13 with access to PyPI). It installs the old and the new version side by side, resolves each API your code calls in both, and prints the two signatures:
+
+```text
+Python 3.13.16 in Otari's sandbox
+pydantic.BaseModel.dict: 1.10.18 (self, *, include=None, exclude=None, by_alias=False, …)  ->  2.14.2 (self, *, include=None, …)
+pydantic.validator: 1.10.18 (*fields, pre=False, each_item=False, always=False, …)  ->  2.14.2 (…)  (deprecated)
+```
+
+A version that doesn't install on Python 3.13 is said so, and the comparison uses the version that did.
+
+### Where you see it
+
+- The run page lists the pages under **Researcher read**, with the change each page backs.
+- The PR has a **What the researcher read** section: the summary, each change with its source, the pages read, the code proof, and the guardrail's verdict on the brief. Its Receipt has a Research row with the model, the pages and MCP calls, and the cost.
+
+## Teire's MCP server
+
+`/api/mcp` is a Streamable HTTP MCP server, stateless and read-only:
+
+| Tool | What it answers |
+|---|---|
+| `list_changes` | Confirmed changes Teire has read (API and model retirements, breaking releases), upcoming shutdowns first, filtered by provider, kind or words in the title |
+| `get_change` | One change: what it applies to, the replacement, migration notes and its quoted sources |
+| `search_docs` | These docs |
+
+Ask Teire's **docs mode** hands this server and Context7 to Otari's MCP loop, so a question about a retirement or a setting is answered from the catalog and the docs, with the MCP calls on the reply's receipt. Any MCP client can add it by URL.
+
+## The prompt-injection guardrail
+
+Release notes, changelogs and vendor pages are written by people outside your repository, and Teire hands them to models. So every one passes a prompt-injection guardrail first, and **Otari runs it**: Teire names it on the request (`guardrails: [{ profile: "prompt-injection", url, mode: "block" }]`), Otari sends the text to it before any model sees it, and refuses the request with `403 guardrail_violation` when it is flagged.
+
+The guardrail is Teire's own service at `/api/guardrails`, in Otari's guardrails contract (`POST /validate` → `{ valid, explanation, score }`). It flags text written to steer an AI rather than inform a reader: orders to drop prior instructions, a new persona, chat-template role markers, orders to hide something from the user, to leak secrets, or to run a remote script. Real release notes and provider pages never need any of these.
+
+| What is screened | When it is refused |
+|---|---|
+| The documents read for an upgrade's notes | Each document is screened on its own; the flagged one is left out, named in the scan, and the rest are read |
+| The research brief | The fixer works without it, and the run says so |
+
+Every guarded call's verdict comes back on Otari's `Otari-Guardrails` header and is stored with the call's receipt.
+
+<Callout title="See it refuse a planted injection">
+  The demo repository [teire-demo-examples](https://github.com/Blockchain-Oracle/teire-demo-examples) names an extra changelog for zod in its `teire.yml`. That changelog ends with a planted instruction to the AI. Otari's guardrail refuses it, and Teire reads zod's own notes without it.
+</Callout>

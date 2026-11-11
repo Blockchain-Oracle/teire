@@ -21,6 +21,10 @@ const nextConfig = {
       { source: "/docs/cli", destination: "/docs/build/cli", permanent: false },
       { source: "/docs/mcp", destination: "/docs/build/mcp", permanent: false },
       { source: "/docs/config", destination: "/docs/guide/configuration", permanent: false },
+      // The model section moved with the gateway (S06): old links land on its Otari pages.
+      { source: "/docs/nemotron", destination: "/docs/otari", permanent: true },
+      { source: "/docs/nemotron/receipts", destination: "/docs/otari/receipts", permanent: true },
+      { source: "/docs/nemotron/evaluation", destination: "/docs/otari/evaluation", permanent: true },
     ];
   },
 };
