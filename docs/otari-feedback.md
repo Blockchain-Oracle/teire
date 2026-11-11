@@ -51,6 +51,20 @@ issue is drafted from here and approved before it is posted). Source references 
 11. **OpenAPI request schemas mark defaulted fields as required for generators.** `include_raw` on
     `SearchRequest` and `FetchRequest` has a default, and openapi-typescript makes it required in
     request types unless run with `--default-non-nullable false`.
+12. **`/tools` says search is available, `/search` says no search tool is configured.** After web
+    search was switched on (2026-11-11), `GET /api/v1/tools` lists `otari_web_search` as available,
+    and the tool works inside a chat call, but `POST /api/v1/search` answers 400 "No search tools are
+    configured. Add one on the dashboard's Tools & Guardrails page". The direct route needs an
+    organization search provider (`pick_direct_search_instance`); the built-in tool runs on the
+    deployment's own. Teire now falls back to the built-in tool when the direct route says so
+    (`discover/web.ts`). `/fetch` has no such split: it answers directly.
+13. **A routing policy saved in the dashboard is invisible to the keys.** Six policies entered on
+    2026-11-11 (`teire-fixer`, …) answer "Unknown or unsupported model" for every key of the
+    organization (the service key, an older service key, an ordinary key), and `GET /api/v1/models`,
+    which lists aliases and policies beside the models, shows none. Policies are scoped to a
+    workspace and a key resolves only its own workspace's, so a policy saved in another workspace than
+    the key's fails this way; the dashboard could say which workspace a policy is in next to the keys
+    that can call it, and the 400 could say "no policy or model named …" so the cause is easier to find.
 
 ## Worked well
 

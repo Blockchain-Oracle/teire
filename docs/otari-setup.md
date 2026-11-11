@@ -91,6 +91,13 @@ Teire switches a role to its policy only after each policy answers a test call
 (`TEIRE_MODEL_<ROLE>=teire-<role>`). Until then each role uses its catalog id, which Otari already
 falls back across up to five hosts of the same model.
 
+**Create them in the workspace that holds the `teire-service` key.** A policy belongs to one
+workspace, and a key resolves only its own workspace's policies (`policy_store.py`). Checked
+2026-11-11: the six policies entered that day answer "Unknown or unsupported model" for every key,
+and `GET /api/v1/models` (which lists policies beside the models) shows none, so they are in another
+workspace. `pnpm --filter @teire/engine exec tsx scripts/otari-offerings.ts --policies` says when they
+resolve.
+
 | Policy             | When 80 % of the budget is used                  | Default                                          | On failure, in order                                                                                                                |
 | ------------------ | ------------------------------------------------ | ------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------- |
 | `teire-fixer`      | `deepinfra:deepseek-ai/DeepSeek-V4.1-Flash-1017` | `fireworks:accounts/fireworks/models/glm-5p3`    | `together:zai-org/GLM-5.3`, `mistral:zai-glm-5-3`, `deepinfra:deepseek-ai/DeepSeek-V4-Pro-0813`                                     |
