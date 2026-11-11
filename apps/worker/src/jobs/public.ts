@@ -13,7 +13,7 @@ import {
   sql,
 } from "@teire/db";
 import { readTeireConfig } from "@teire/engine/config";
-import { PUBLIC_LIMITS } from "@teire/engine/constants";
+import { ALLOWANCE, PUBLIC_LIMITS } from "@teire/engine/constants";
 import { lineageKey } from "@teire/engine/contract";
 import { endUsers } from "@teire/engine/gateway";
 import { directoryTree, fetchRepoTarball, scopedTree } from "@teire/engine/inventory";
@@ -204,7 +204,9 @@ export async function publicScan(ctx: WorkerContext, publicScanId: string) {
     dir = checkout.dir;
     const config = readTeireConfig(directoryTree(dir));
     const tree = scopedTree(directoryTree(dir), config);
-    const blocked = await modelWorkBlocked(db);
+    // The person who asked pays for the scan's model reading on Otari.
+    const scanAi = await requesterAi(db, request.requestedBy);
+    const blocked = (await modelWorkBlocked(db, scanAi, ALLOWANCE.scanUsd))?.reason ?? null;
     const result = await assessCheckout(db, {
       repoId: meta.id,
       scanId: scan.id,
@@ -218,7 +220,7 @@ export async function publicScan(ctx: WorkerContext, publicScanId: string) {
       isPrivate: false,
       startedAt,
       blocked,
-      ai: blocked ? null : await requesterAi(db, request.requestedBy),
+      ai: blocked ? null : scanAi,
       // The report's live flow follows the scan (V5–V6 review).
       onStep: (step) => db.update(publicScans).set({ step }).where(eq(publicScans.id, publicScanId)),
     });

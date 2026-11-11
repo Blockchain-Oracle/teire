@@ -8,6 +8,7 @@ import {
   type TeireConfig,
   upgradeOptions,
 } from "@teire/engine/config";
+import { ALLOWANCE } from "@teire/engine/constants";
 import { ECOSYSTEMS, lineageKey } from "@teire/engine/contract";
 import type { Ai } from "@teire/engine/gateway";
 import {
@@ -576,8 +577,11 @@ export async function scanRepo(
     );
     config.ignore = [...new Set([...config.ignore, ...((repo.ignores as string[] | null) ?? [])])];
     const tree = scopedTree(directoryTree(checkout.dir), config);
-    // Model work (provider pages, wrapped-model triage) waits while credits or the budget are out (S10).
-    const blocked = await modelWorkBlocked(db);
+    // Model work (provider pages, wrapped-model triage) is billed to the installation; it is skipped,
+    // and the scan says why, while Otari's balance or the installation's allowance can't cover it.
+    const scanAi = await installationAi(repo.installationId);
+    const block = await modelWorkBlocked(db, scanAi, ALLOWANCE.scanUsd);
+    const blocked = block?.reason ?? null;
     if (blocked) console.log(`[scan] ${repo.fullName}: model reading skipped: ${blocked}`);
     const {
       js,
@@ -602,7 +606,7 @@ export async function scanRepo(
       token,
       installationId: repo.installationId,
       isPrivate: meta.private,
-      ai: blocked ? null : await installationAi(repo.installationId),
+      ai: blocked ? null : scanAi,
       startedAt,
       blocked,
       onProviderChanges: (slugs) => fanOutProviderChanges(ctx, repoId, slugs),

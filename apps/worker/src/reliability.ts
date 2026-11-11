@@ -1,6 +1,6 @@
-import { and, type Database, eq, gte, llmCalls, lt, runs, scans, sql, systemState } from "@teire/db";
-import { ASSISTANT, DAILY_COST_CAP_DEFAULT_USD, RUNS } from "@teire/engine/constants";
-import { pingModel } from "@teire/engine/gateway";
+import { and, type Database, eq, lt, runs, scans, sql, systemState } from "@teire/db";
+import { ASSISTANT, RUNS } from "@teire/engine/constants";
+import { type Ai, pingModel, refusalSaid, startRefusal } from "@teire/engine/gateway";
 import type { GitHubApp } from "@teire/engine/github";
 import { aiFor } from "./gateway";
 import { orphanedQueuedRuns } from "./store";
@@ -80,20 +80,41 @@ export async function markCreditsExhausted(db: Database, detail: string) {
   } satisfies CreditsState);
 }
 
-/** Why model work must wait right now, or null: credits gone, or today's spend at the cap. */
-export async function modelWorkBlocked(db: Database) {
+/** Why model work waits: whose money is short, said plainly, and when it comes back. */
+export interface ModelBlock {
+  scope: "balance" | "user" | "key";
+  reason: string;
+  resetsAt: Date | null;
+}
+
+/**
+ * Why model work must wait right now, or null. Otari keeps the money: its balance ran out (a 402 seen
+ * earlier), or the end user paying for this work (an installation, a person) or the service key as a
+ * whole has less left than the work may hold at once (`needUsd`, ALLOWANCE). Otari refuses such a
+ * call anyway; reading first means the work waits whole instead of stopping halfway.
+ */
+export async function modelWorkBlocked(db: Database, ai: Ai | null, needUsd: number): Promise<ModelBlock | null> {
   const credits = await getState<CreditsState>(db, "credits");
   if (credits?.exhausted)
-    return `Token Factory credits are exhausted (since ${credits.since.slice(0, 16).replace("T", " ")} UTC); runs resume when they are topped up.`;
-  const cap = Number(process.env.TEIRE_DAILY_COST_CAP_USD ?? DAILY_COST_CAP_DEFAULT_USD);
-  const [row] = await db
-    .select({ spent: sql<string>`coalesce(sum(${llmCalls.costUsd}), 0)` })
-    .from(llmCalls)
-    .where(gte(llmCalls.createdAt, new Date(Date.now() - 24 * 3600_000)));
-  const spent = Number(row?.spent ?? 0);
-  if (cap > 0 && spent >= cap)
-    return `The daily model budget ($${cap.toFixed(2)}) is used up ($${spent.toFixed(2)} in the last 24 h); runs resume as it frees.`;
-  return null;
+    return {
+      scope: "balance",
+      resetsAt: null,
+      reason: `Teire's Otari balance ran out (since ${credits.since.slice(0, 16).replace("T", " ")} UTC); runs resume when it is topped up.`,
+    };
+  if (!ai) return null;
+  const refusal = await startRefusal(ai, needUsd);
+  if (!refusal) return null;
+  return {
+    scope: refusal.scope,
+    resetsAt: refusal.resetsAt,
+    reason: refusalSaid(refusal, ai.endUser?.id ?? null),
+  };
+}
+
+/** Seconds to wait before trying again: a minute past the reset, else `fallbackSec`. */
+export function waitSecondsFor(block: { resetsAt: Date | null }, fallbackSec: number): number {
+  if (!block.resetsAt) return fallbackSec;
+  return Math.max(60, Math.ceil((block.resetsAt.getTime() - Date.now()) / 1000) + 60);
 }
 
 const INTERRUPTED = {

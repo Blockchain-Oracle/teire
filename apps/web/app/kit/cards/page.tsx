@@ -1,9 +1,8 @@
-import { ASSISTANT } from "@teire/engine/constants";
+import { type Allowance, refusalSaid } from "@teire/engine/gateway";
 import { connection } from "next/server";
 import { Suspense } from "react";
 import { NoticeCard } from "@/components/assistant/assistant-cards";
 import { LogoMark } from "@/components/logo";
-import { personBudgetSaid } from "@/lib/assistant/budget";
 import type { AssistantNotice } from "@/lib/assistant/message";
 import { assistantTools } from "@/lib/assistant/tools";
 import { type Viewer, viewerOfUser } from "@/lib/assistant/viewer";
@@ -133,7 +132,16 @@ async function Board() {
   // The twentieth: what a person sees when their own daily budget is spent (no model call).
   const notice: AssistantNotice = {
     kind: "budget",
-    message: personBudgetSaid(ASSISTANT.perUserDailyUsd),
+    message: refusalSaid(
+      {
+        scope: "user",
+        blocked: false,
+        leftUsd: 0.004,
+        resetsAt: new Date(new Date().setUTCHours(24, 0, 0, 0)),
+        allowance: { limitUsd: 0.5 } as Allowance,
+      },
+      "gh:0",
+    ),
     results: budgetDocs.results.slice(0, 4),
   };
 

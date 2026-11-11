@@ -1,4 +1,14 @@
 export {
+  type Allowance,
+  allowanceOf,
+  comesBack,
+  type KeyAllowance,
+  keyAllowance,
+  refusalSaid,
+  type StartRefusal,
+  startRefusal,
+} from "./allowance";
+export {
   type Ai,
   type CallOptions,
   type CallSettings,

@@ -3,7 +3,6 @@ import {
   createLocalDb,
   eq,
   inArray,
-  llmCalls,
   repos,
   runEvents,
   runMigrations,
@@ -134,26 +133,51 @@ describe.skipIf(!url)("reliability (Postgres)", () => {
     expect(rows.map((r) => r.seq).sort((a, b) => a - b)).toEqual(Array.from({ length: 40 }, (_, i) => i + 1));
   });
 
-  it("blocks model work at the daily cap, with the reason", async () => {
-    process.env.TEIRE_DAILY_COST_CAP_USD = "1";
-    // The throwaway test database keeps rows between runs; this test counts spend from nothing.
-    await db.delete(llmCalls);
-    expect(await modelWorkBlocked(db)).toBeNull();
-    await db
-      .insert(llmCalls)
-      .values({ purpose: "agent", model: "nvidia/Nemotron-3-Ultra-550b-a55b", costUsd: "1.25" });
-    expect(await modelWorkBlocked(db)).toMatch(/daily model budget \(\$1\.00\) is used up \(\$1\.25/);
-    delete process.env.TEIRE_DAILY_COST_CAP_USD;
+  // An installation on Otari with `spend` of its $3.00 a day gone, resetting at midnight UTC.
+  const otariWith = (spend: number) =>
+    ({
+      endUser: { id: "inst:1", budget: "teire-installation-daily" },
+      rest: {
+        endUser: async () => ({
+          external_id: "inst:1",
+          budget_id: "b-inst",
+          blocked: false,
+          spend,
+          reserved: 0,
+          next_budget_reset_at: new Date(Date.now() + 3600_000).toISOString(),
+        }),
+        budgetsByName: async () =>
+          new Map([
+            [
+              "teire-installation-daily",
+              {
+                budget_id: "b-inst",
+                name: "teire-installation-daily",
+                max_budget: 3,
+                reset_alignment: "calendar_day",
+              },
+            ],
+          ]),
+        keyBudget: async () => ({ budgets_enforced: true, remaining_usd: 9, limits: [] }),
+      },
+    }) as unknown as Parameters<typeof modelWorkBlocked>[1];
+
+  it("waits for the installation's own allowance on Otari, with when it comes back", async () => {
+    expect(await modelWorkBlocked(db, otariWith(1), 0.15)).toBeNull();
+    const block = await modelWorkBlocked(db, otariWith(2.95), 0.15);
+    expect(block?.scope).toBe("user");
+    expect(block?.reason).toMatch(
+      /This installation's AI allowance is used up for now \(\$0\.05 of \$3\.00 left\)/,
+    );
+    expect(block?.resetsAt).toBeInstanceOf(Date);
   });
 
   it("blocks model work after a 402 until it is cleared", async () => {
-    process.env.TEIRE_DAILY_COST_CAP_USD = "0";
     await markCreditsExhausted(db, "credit_balance_exhausted");
-    expect(await modelWorkBlocked(db)).toMatch(/Token Factory credits are exhausted/);
+    expect((await modelWorkBlocked(db, null, 0.15))?.reason).toMatch(/Otari balance ran out/);
     const credits = await getState<{ exhausted: boolean }>(db, "credits");
     await setState(db, "credits", { ...credits, exhausted: false });
-    expect(await modelWorkBlocked(db)).toBeNull();
-    delete process.env.TEIRE_DAILY_COST_CAP_USD;
+    expect(await modelWorkBlocked(db, null, 0.15)).toBeNull();
   });
 
   it("rescans active repos on their teire.yml schedule, and only those", async () => {

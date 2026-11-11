@@ -85,6 +85,19 @@ export const END_USERS = {
   catalog: { id: "teire:catalog", budget: "teire-catalog-daily" },
 } as const;
 
+/**
+ * How much must be left in an allowance on Otari before work starts (Otari holds each call's prompt
+ * and full output limit until it settles, and refuses a hold that doesn't fit). Measured 2026-11-10
+ * (context/02-otari-api-and-integrations/s02-measurements-2026-11-10.md): one GLM 5.3 fixer step
+ * holds 16,000 output tokens x $4.40/M = $0.07 plus its prompt, so a fix run starts with two steps'
+ * worth; a scan's reader holds far less; an Ask Teire reply is up to 8 small steps (about $0.012).
+ */
+export const ALLOWANCE = {
+  fixRunUsd: 0.15,
+  scanUsd: 0.03,
+  replyUsd: 0.025,
+} as const;
+
 /** Ask Teire's limits (plan revision 3.3, U4, D127): per reply, per person per day, all of it per day. */
 /**
  * The overall model budget per day (fix runs and chat together), when TEIRE_DAILY_COST_CAP_USD is unset:
@@ -99,17 +112,7 @@ export const ASSISTANT = {
   temperature: 0.3,
   maxSteps: 8,
   maxOutputTokens: 2_000,
-  /**
-   * What a reply is reserved at before it runs; the receipt replaces it with what it cost. Most
-   * replies cost well under this; a long one can pass it, so a cap is exceeded by at most
-   * one reply's difference.
-   */
-  estimateUsd: 0.05,
-  /** Assistant spend per person per day, and across everyone, apart from fix runs' budget. */
-  perUserDailyUsd: 0.5,
-  totalDailyUsd: 5,
-  /** The operator walk (scripted questions on production) has its own allowance. */
-  operatorDailyUsd: 2,
+  // What a person may spend is their budget on Otari (ALLOWANCE, docs/otari-setup.md), not a number here.
   /** A reservation no reply settled (its function was stopped) counts at its estimate after this. */
   staleReservationMs: 15 * 60_000,
   /** Threads, their messages and their receipts are kept this long. */

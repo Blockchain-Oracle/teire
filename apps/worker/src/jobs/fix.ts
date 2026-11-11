@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { AFFECTED_RANGES_SEPARATOR, stillAffected } from "@teire/engine/advisories";
 import { RunCancelledError, withCancel } from "@teire/engine/cancel";
 import { matchesTarget, readTeireConfig, type TeireConfig, upgradeOptions } from "@teire/engine/config";
-import { FIX, RUNS, SCAN } from "@teire/engine/constants";
+import { ALLOWANCE, FIX, RUNS, SCAN } from "@teire/engine/constants";
 import { type CallSite, type ChangeV2, type Ecosystem, lineageKey } from "@teire/engine/contract";
 import {
   type CoMovedUsage,
@@ -94,7 +94,7 @@ import {
 import { cachedSurfaceDiff, dependencyCacheFor, postgresRegistryCache } from "../caches";
 import { authorizedRegistries } from "../credentials";
 import { aiFor, installationAi } from "../gateway";
-import { markCreditsExhausted, modelWorkBlocked } from "../reliability";
+import { markCreditsExhausted, modelWorkBlocked, waitSecondsFor } from "../reliability";
 import { resolveForRepo } from "../resolver";
 import {
   appendEvent,
@@ -1901,17 +1901,33 @@ export async function fixRun(ctx: WorkerContext, runId: string) {
     return { deferred: true };
   }
 
-  // Money and the model service decide whether model work may start (S10).
-  const blocked = await modelWorkBlocked(db);
+  // Who pays on Otari: the installation for its own runs, the person who asked for a dry run. The run
+  // starts only when that allowance (and Teire's overall budget) covers what one attempt may hold.
+  const ai = dry
+    ? ((await requesterAi(db, run.requestedBy)) ?? (await aiFor(null)))
+    : await installationAi(repo.installationId);
+  const blocked = await modelWorkBlocked(db, ai, ALLOWANCE.fixRunUsd);
   if (blocked) {
-    await update({ status: "queued", step: "waiting for the model budget", workerId: null });
-    await event("queue", "deferred", { reason: blocked });
+    const step =
+      blocked.scope === "user"
+        ? dry
+          ? "waiting for your AI allowance"
+          : "waiting for this installation's AI allowance"
+        : blocked.scope === "key"
+          ? "waiting for Teire's AI budget"
+          : "waiting for Otari credit";
+    await update({ status: "queued", step, error: blocked.reason, workerId: null });
+    await event("queue", "deferred", {
+      reason: blocked.reason,
+      scope: blocked.scope,
+      resetsAt: blocked.resetsAt?.toISOString() ?? null,
+    });
     await settleRunActions(db, runId, ["fix", "rebase", "refresh", "recreate", "retry-run"], {
       status: "started",
-      result: `Waiting: ${blocked}`,
+      result: `Waiting: ${blocked.reason}`,
     });
-    await ctx.enqueueFix(runId, repo.id, BUDGET_RETRY_SECONDS);
-    return { deferred: blocked };
+    await ctx.enqueueFix(runId, repo.id, waitSecondsFor(blocked, BUDGET_RETRY_SECONDS));
+    return { deferred: blocked.reason };
   }
 
   // A run resumed after a deferral (credits, the updater) starts clean: the old reason is history.
@@ -1975,10 +1991,6 @@ export async function fixRun(ctx: WorkerContext, runId: string) {
     );
     runConfig.ignore = [...new Set([...runConfig.ignore, ...((repo.ignores as string[] | null) ?? [])])];
     const tree = scopedTree(directoryTree(checkout.dir), runConfig);
-    // Who pays on Otari: the installation for its own runs, the person who asked for a dry run.
-    const ai = dry
-      ? ((await requesterAi(db, run.requestedBy)) ?? (await aiFor(null)))
-      : await installationAi(repo.installationId);
     const selected = await selectBackend(process.env);
     const { note } = selected;
     // Private registries this repo names that its installation has a credential for (S18.7): for

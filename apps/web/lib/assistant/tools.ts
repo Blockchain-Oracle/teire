@@ -8,6 +8,7 @@ import { z } from "zod";
 import { type LedgerCheck, notCoveredFrom } from "@/components/teire/ledger";
 import { runFlow } from "@/lib/flow/model";
 import { runFlowsOf } from "@/lib/run-flows";
+import { installationAllowance, meterOf, personAllowance } from "../allowances";
 import { getChange, listChanges } from "../catalog";
 import { database } from "../db";
 import { searchDocs } from "../docs-search";
@@ -678,19 +679,25 @@ export function assistantTools(viewer: Viewer) {
 
     get_usage: tool({
       description:
-        "Usage in the person's installation over 30 days: runs, sandbox time, model spend by purpose, and their own Ask Teire spend today against its daily cap.",
+        "Usage in the person's installation over 30 days: runs, sandbox time, model spend by purpose, their Ask Teire spend, and the AI allowances Otari keeps for them and their installation (spent, left, when it resets).",
       inputSchema: z.object({}),
       execute: () =>
         safely(async () => {
           const scope = needScope();
           if ("error" in scope) return scope;
-          const [usage, mine] = await Promise.all([usageOf(scope), assistantSpend(viewer.userId)]);
+          const [usage, mine, you, theirs] = await Promise.all([
+            usageOf(scope),
+            assistantSpend(viewer.userId),
+            viewer.userId ? personAllowance(viewer.userId) : null,
+            scope.installationId ? installationAllowance(scope.installationId) : null,
+          ]);
           return {
             asOf: now(),
             runs: usage.runs,
             sandboxMinutes: Math.round(usage.sandboxMs / 60_000),
             byPurpose: usage.byPurpose,
             assistant: mine,
+            allowance: { you: meterOf(you), installation: meterOf(theirs) },
             link: "/app/settings/usage",
           };
         }),

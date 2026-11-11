@@ -1,5 +1,5 @@
 import { gte, llmCalls, runs, sql, systemState } from "@teire/db";
-import { ASSISTANT, DAILY_COST_CAP_DEFAULT_USD } from "@teire/engine/constants";
+import { ASSISTANT } from "@teire/engine/constants";
 import {
   Activity,
   Ban,
@@ -25,6 +25,7 @@ import { Suspense } from "react";
 import { BrandLogo } from "@/components/brand-logo";
 import { GhostFlow } from "@/components/flow/ghost-flow";
 import { StaticFlow } from "@/components/flow/static-flow";
+import { serviceAllowance } from "@/lib/allowances";
 import { SPONSORS, STACK } from "@/lib/brands";
 import { database } from "@/lib/db";
 import type { FlowGraph } from "@/lib/flow/model";
@@ -123,6 +124,8 @@ async function Live() {
   const credits = state.get("credits") as Credits | undefined;
   const models = state.get("models") as Models | undefined;
   const redelivery = state.get("redelivery") as Redelivery | undefined;
+  // Otari's ceiling on Teire's key: what is left for everyone together, and when it resets.
+  const ceiling = await serviceAllowance();
   const day = new Date(Date.now() - 24 * 3600_000);
   const week = new Date(Date.now() - 7 * 24 * 3600_000);
   const [spend] = await db
@@ -194,7 +197,10 @@ async function Live() {
             ${Number(spend?.week ?? 0).toFixed(2)}
           </span>
           <span className="font-mono text-[11px] text-ink-3">
-            7 days · ${Number(spend?.day ?? 0).toFixed(2)} today · cap ${DAILY_COST_CAP_DEFAULT_USD}/day
+            7 days · ${Number(spend?.day ?? 0).toFixed(2)} today
+            {ceiling?.leftUsd !== null && ceiling?.leftUsd !== undefined
+              ? ` · $${ceiling.leftUsd.toFixed(2)} left on Otari until ${ceiling.resetsAt?.slice(0, 10) ?? "reset"}`
+              : ""}
           </span>
           <ul className="mt-1 flex flex-col gap-1 font-mono text-[11px] text-ink-2">
             {byModel.map((m) => (
@@ -560,7 +566,7 @@ const RULES: { title: string; line: string; icon: LucideIcon }[] = [
   },
   {
     title: "Spending stops itself",
-    line: `Model work pauses when credits run out or the $${DAILY_COST_CAP_DEFAULT_USD} daily cap is used, and resumes on its own; Ask Teire threads go after ${ASSISTANT.retentionDays} days.`,
+    line: `Otari keeps every allowance: each person, each installation and Teire as a whole has a budget there. Work waits for its own allowance to reset, then resumes on its own; Ask Teire threads go after ${ASSISTANT.retentionDays} days.`,
     icon: PiggyBank,
   },
 ];

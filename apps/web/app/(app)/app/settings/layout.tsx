@@ -14,6 +14,7 @@ export default function SettingsLayout({ children }: LayoutProps<"/app/settings"
             { key: "installations", label: "Installations" },
             { key: "registries", label: "Private registries" },
             { key: "usage", label: "Usage" },
+            { key: "allowances", label: "Allowances" },
             { key: "account", label: "Account" },
           ]}
         />

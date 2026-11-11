@@ -10,6 +10,7 @@ import {
   SignOutEverywhere,
   Uninstall,
 } from "@/components/app/access-controls";
+import { AllowanceMeter } from "@/components/app/allowance-meter";
 import { BulkFixMode } from "@/components/app/bulk-fix-mode";
 import { ConfigBoard } from "@/components/app/config-board";
 import { ConfigPrForm } from "@/components/app/config-pr-form";
@@ -23,6 +24,7 @@ import { MarkStack } from "@/components/teire/mark";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { StackedActivityBars } from "@/components/ui/stacked-activity";
+import { installationAllowance, meterOf, personAllowance, serviceAllowance } from "@/lib/allowances";
 import { myScope } from "@/lib/app-shell";
 import { assistantSpend } from "@/lib/assistant/budget";
 import { githubLogin } from "@/lib/auth";
@@ -34,8 +36,17 @@ import { getSession } from "@/lib/session";
 import { ADD_ACCOUNT_URL, APP_SLUG, INSTALL_URL } from "@/lib/site";
 import { reposOf, usageDaily, usageOf } from "@/lib/workspace";
 import { InstallCard, SignInCard } from "../../gate";
+import { Allowances } from "../allowances";
 
-const SECTIONS = ["organization", "repositories", "installations", "registries", "usage", "account"] as const;
+const SECTIONS = [
+  "organization",
+  "repositories",
+  "installations",
+  "registries",
+  "usage",
+  "allowances",
+  "account",
+] as const;
 type Section = (typeof SECTIONS)[number];
 
 export async function generateMetadata({ params }: PageProps<"/app/settings/[section]">) {
@@ -95,6 +106,13 @@ async function Body({ params }: PageProps<"/app/settings/[section]">) {
   if (section === "account")
     return <Account userId={session.user.id} name={session.user.name} image={session.user.image ?? null} />;
   const mine = await myScope(session.user.id);
+  if (section === "allowances")
+    return (
+      <Allowances
+        userId={session.user.id}
+        installation={mine ? { id: mine.installation.id, login: mine.installation.login } : null}
+      />
+    );
   if (!mine) return <InstallCard />;
   const inst = mine.installation;
   switch (section as Section) {
@@ -197,10 +215,13 @@ async function Body({ params }: PageProps<"/app/settings/[section]">) {
       );
     }
     case "usage": {
-      const [u, daily, mineAsked] = await Promise.all([
+      const [u, daily, mineAsked, you, theirs, service] = await Promise.all([
         usageOf(mine.scope),
         usageDaily(mine.scope, 30),
         assistantSpend(session.user.id),
+        personAllowance(session.user.id),
+        installationAllowance(inst.id),
+        serviceAllowance(),
       ]);
       const cost = u.byPurpose.reduce((n, p) => n + p.costUsd, 0);
       const order = [...daily.purposes].sort(
@@ -208,7 +229,6 @@ async function Body({ params }: PageProps<"/app/settings/[section]">) {
           daily.series.reduce((n, d) => n + (d[b] ?? 0), 0) -
           daily.series.reduce((n, d) => n + (d[a] ?? 0), 0),
       );
-      const share = mineAsked.dailyCapUsd ? Math.min(1, mineAsked.todayUsd / mineAsked.dailyCapUsd) : 0;
       return (
         <Part title="Usage" chip={<Chip>last 30 days · from the receipts</Chip>}>
           <div className="grid grid-cols-3 gap-3">
@@ -266,19 +286,24 @@ async function Body({ params }: PageProps<"/app/settings/[section]">) {
               </table>
             </div>
           ) : null}
-          {/* Ask Teire has its own budget, apart from fix runs (D127): chatting never stops a fix. */}
-          <div className="flex items-center gap-3 rounded-xl bg-sheet px-4 py-3 shadow-card">
-            <MessageCircleQuestion className="size-4 shrink-0 text-ink-2" aria-hidden />
-            <span className="text-sm text-ink-2">Ask Teire today</span>
-            <span className="h-1.5 min-w-16 flex-1 overflow-hidden rounded-full bg-sunken" aria-hidden>
-              <span
-                className="block h-full rounded-full bg-signal"
-                style={{ width: `${Math.round(share * 100)}%` }}
-              />
-            </span>
-            <span className="font-mono text-xs text-ink tabular-nums">
-              ${mineAsked.todayUsd.toFixed(3)} / ${mineAsked.dailyCapUsd.toFixed(2)}
-            </span>
+          {/* Otari keeps every allowance (S03): a person's, the installation's, and Teire's overall budget. */}
+          <div className="flex flex-col gap-4 rounded-xl bg-sheet p-4 shadow-card">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-ink">AI allowances on Otari</span>
+              <span className="ml-auto text-[11px] text-ink-3">live from Otari's budgets</span>
+            </div>
+            <AllowanceMeter label="You: Ask Teire, public scans, dry runs" meter={meterOf(you)} />
+            <AllowanceMeter label={`${inst.login}: scans, fix runs, CI repair`} meter={meterOf(theirs)} />
+            {service?.leftUsd !== null && service?.leftUsd !== undefined ? (
+              <p className="font-mono text-[10px] text-ink-3">
+                Teire overall: ${service.leftUsd.toFixed(2)} left
+                {service.resetsAt ? ` · resets ${service.resetsAt.slice(0, 10)}` : ""}
+              </p>
+            ) : null}
+            <p className="flex items-center gap-2 text-[11px] text-ink-3">
+              <MessageCircleQuestion className="size-3.5 shrink-0" aria-hidden />
+              Ask Teire: ${mineAsked.todayUsd.toFixed(3)} today, ${mineAsked.monthUsd.toFixed(2)} over 30 days
+            </p>
           </div>
         </Part>
       );

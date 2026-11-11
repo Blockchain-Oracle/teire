@@ -1,75 +1,43 @@
 import { assistantCalls, eq, sql, systemState } from "@teire/db";
-import { ASSISTANT, DAILY_COST_CAP_DEFAULT_USD } from "@teire/engine/constants";
-import type { GatewayReceipt } from "@teire/engine/gateway";
+import { ALLOWANCE } from "@teire/engine/constants";
+import { type Ai, type GatewayReceipt, refusalSaid, startRefusal } from "@teire/engine/gateway";
 import { database } from "../db";
 
 /**
- * Ask Teire's budget (D127): its own daily caps, per person and across everyone, apart from fix
- * runs, so chatting never stops a fix (`modelWorkBlocked` reads only `llm_calls`). A reply is
- * reserved at an estimate before the model runs, under one lock, so concurrent questions can't all
- * pass a cap that only one of them fits under; the receipt then replaces the estimate with the cost.
- * An empty Otari balance and the overall daily cap (fixes and chat together) also stop it. Each
- * reply's cost is Otari's own (`usage.cost_usd`), with the model and provider that answered.
+ * Ask Teire's allowance is the person's own on Otari (D127, now Otari's): every reply is billed to them
+ * as an end user of the service key, on the dashboard budget their account is on, and Otari refuses a
+ * call whose hold doesn't fit. Before the model runs, the reply checks that what is left covers one
+ * reply (ALLOWANCE.replyUsd), so a person whose allowance is spent reads when it comes back instead of
+ * a reply cut off halfway. Fix runs bill their installation, so chatting never stops a fix. Each
+ * reply's row is reserved first and then carries Otari's receipt: its cost, model and provider.
  */
 const DAY = sql`now() - interval '24 hours'`;
 
-/** The overall model budget per day, as the worker reads it (its default when unset). */
-const OVERALL_CAP_USD = Number(process.env.TEIRE_DAILY_COST_CAP_USD ?? DAILY_COST_CAP_DEFAULT_USD);
-
 export type Reservation = { id: number } | { blocked: string };
 
-/** What a person reads when their own daily allowance is spent (also the kit's notice card). */
-export const personBudgetSaid = (allowance: number) =>
-  `You've used today's Ask Teire budget ($${allowance.toFixed(2)} a day); it frees up over the next 24 hours.`;
-
 export async function reserve(input: {
+  ai: Ai;
   userId: string | null;
   threadId: string;
   model: string;
 }): Promise<Reservation> {
   const db = database();
-  const who = input.userId ?? "operator";
   const [credits] = await db.select().from(systemState).where(eq(systemState.key, "credits")).limit(1);
   if ((credits?.value as { exhausted?: boolean } | undefined)?.exhausted)
     return { blocked: "Teire's Otari balance is used up for now, so Ask Teire can't answer." };
-  return db.transaction(async (tx) => {
-    await tx.execute(sql`select pg_advisory_xact_lock(hashtext('teire:assistant-budget'))`);
-    const [spent] = (
-      await tx.execute<{ mine: string; everyone: string; fixes: string }>(sql`
-        select
-          coalesce(sum(cost_usd) filter (where user_id = ${who}), 0) as mine,
-          coalesce(sum(cost_usd), 0) as everyone,
-          (select coalesce(sum(cost_usd), 0) from llm_calls where created_at > ${DAY}) as fixes
-        from assistant_calls where created_at > ${DAY} and status <> 'failed'`)
-    ).rows;
-    const mine = Number(spent?.mine ?? 0);
-    const everyone = Number(spent?.everyone ?? 0);
-    const fixes = Number(spent?.fixes ?? 0);
-    const next = ASSISTANT.estimateUsd;
-    const allowance = input.userId === null ? ASSISTANT.operatorDailyUsd : ASSISTANT.perUserDailyUsd;
-    if (mine + next > allowance)
-      return {
-        blocked: personBudgetSaid(allowance),
-      };
-    if (everyone + next > ASSISTANT.totalDailyUsd)
-      return {
-        blocked:
-          "Ask Teire's budget for today is used up across everyone; it frees up over the next 24 hours.",
-      };
-    if (OVERALL_CAP_USD > 0 && fixes + everyone + next > OVERALL_CAP_USD)
-      return { blocked: "Today's model budget is used up; Teire keeps it for fixes until it frees up." };
-    const [row] = await tx
-      .insert(assistantCalls)
-      .values({
-        userId: who,
-        threadId: input.threadId,
-        model: input.model,
-        costUsd: next.toFixed(6),
-        status: "reserved",
-      })
-      .returning({ id: assistantCalls.id });
-    return { id: row?.id ?? 0 };
-  });
+  const refusal = await startRefusal(input.ai, ALLOWANCE.replyUsd);
+  if (refusal) return { blocked: refusalSaid(refusal, input.ai.endUser?.id ?? null) };
+  const [row] = await db
+    .insert(assistantCalls)
+    .values({
+      userId: input.userId ?? "operator",
+      threadId: input.threadId,
+      model: input.model,
+      costUsd: "0",
+      status: "reserved",
+    })
+    .returning({ id: assistantCalls.id });
+  return { id: row?.id ?? 0 };
 }
 
 /** The reply's receipt: its real tokens and cost, replacing the reservation. */
@@ -107,7 +75,7 @@ export async function settle(
     .where(eq(assistantCalls.id, id));
 }
 
-/** This person's assistant spend: today's and the last 30 days' (Settings › Usage, the usage tool). */
+/** This person's Ask Teire spend from the receipts: today's and the last 30 days' (Settings › Usage, the usage tool). */
 export async function assistantSpend(userId: string | null) {
   const who = userId ?? "operator";
   const [row] = (
@@ -122,6 +90,5 @@ export async function assistantSpend(userId: string | null) {
     monthUsd: Number(row?.month ?? 0),
     replies: row?.replies ?? 0,
     tokens: Number(row?.tokens ?? 0),
-    dailyCapUsd: ASSISTANT.perUserDailyUsd,
   };
 }

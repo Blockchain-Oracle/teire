@@ -84,6 +84,43 @@ export function createOtariRest(config: { apiKey: string; baseURL: string }, fet
       return data[0] ?? null;
     },
 
+    /** Every end user of the service key, oldest first (the operator's allowances page). */
+    async endUsers() {
+      const { data, error, response } = await client.GET("/api/v1/end-users");
+      if (!data) return fail("end users", response, error);
+      return data;
+    },
+
+    /**
+     * Put an end user on one of the key's budgets, creating it if needed (the operator raising or
+     * lowering someone's allowance). Otari restarts its period on the new budget.
+     */
+    async putEndUser(externalId: string, budgetId: string) {
+      const { data, error, response } = await client.PUT("/api/v1/end-users", {
+        params: { query: { external_id: externalId } },
+        body: { budget_id: budgetId },
+      });
+      if (!data) return fail("end user", response, error);
+      return data;
+    },
+
+    /** Pause an end user (Otari refuses its calls whatever is left) or let it work again. */
+    async blockEndUser(externalId: string, blocked: boolean) {
+      const { data, error, response } = await client.PATCH("/api/v1/end-users", {
+        params: { query: { external_id: externalId } },
+        body: { blocked },
+      });
+      if (!data) return fail("end user", response, error);
+      return data;
+    },
+
+    /** The key's end-user budgets now, uncached, with how many end users each holds. */
+    async endUserBudgets() {
+      const { data, error, response } = await client.GET("/api/v1/end-user-budgets");
+      if (!data) return fail("end-user budgets", response, error);
+      return data;
+    },
+
     /** The service key's end-user budgets, by name. */
     budgetsByName(): Promise<Map<string, EndUserBudget>> {
       if (budgets && Date.now() - budgets.at < GATEWAY.budgetsRefreshMs) return budgets.read;

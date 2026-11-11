@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { AllowanceMeter } from "@/components/app/allowance-meter";
 import { MiniFlow } from "@/components/flow/mini-flow";
 import { ReachFan } from "@/components/flow/reach-fan";
 import { Trail } from "@/components/flow/trail";
@@ -954,7 +955,6 @@ const PURPOSE_COLOR = [
 ];
 
 export function UsageCard({ o }: { o: Out<"get_usage"> }) {
-  const share = Math.min(100, (o.assistant.todayUsd / o.assistant.dailyCapUsd) * 100);
   const model = o.byPurpose.reduce((n, p) => n + p.costUsd, 0);
   const parts = o.byPurpose.filter((p) => p.costUsd > 0).slice(0, PURPOSE_COLOR.length);
   return (
@@ -995,17 +995,12 @@ export function UsageCard({ o }: { o: Out<"get_usage"> }) {
           </figcaption>
         </figure>
       ) : null}
-      <div className="flex flex-col gap-1">
-        <span className="flex justify-between text-[11px] text-ink-3">
-          <span>Ask Teire today</span>
-          <span className="font-mono">
-            ${o.assistant.todayUsd.toFixed(3)} / ${o.assistant.dailyCapUsd.toFixed(2)}
-          </span>
-        </span>
-        <span className="h-1.5 overflow-hidden rounded-full bg-sunken ring-1 ring-rule ring-inset">
-          <span className="block h-full bg-signal" style={{ width: `${share}%` }} />
-        </span>
-      </div>
+      {o.allowance.you ? (
+        <AllowanceMeter label="Your AI allowance on Otari" meter={o.allowance.you} compact />
+      ) : null}
+      {o.allowance.installation ? (
+        <AllowanceMeter label="Your installation's AI allowance" meter={o.allowance.installation} compact />
+      ) : null}
     </Card>
   );
 }

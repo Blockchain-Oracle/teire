@@ -145,7 +145,7 @@ export async function POST(request: Request) {
 
   const ai = await viewerAi(viewer.userId);
   const model = ai.modelId("assistant");
-  const reservation = await reserve({ userId: viewer.userId, threadId: thread.id, model });
+  const reservation = await reserve({ ai, userId: viewer.userId, threadId: thread.id, model });
 
   // Budget reached: said plainly, with docs search results labelled as search results.
   if ("blocked" in reservation) {
