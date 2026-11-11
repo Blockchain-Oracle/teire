@@ -41,6 +41,9 @@ interface AssistantApi extends Layout {
   mode: "app" | "docs";
   context: AssistantContext | null;
   mentions: Mention[];
+  /** The signed-in app shell is on screen: the server already knows who this is. */
+  shellSignedIn: boolean;
+  setShellSignedIn: (signedIn: boolean) => void;
   /** A question to send as soon as the panel is ready (Explain, ⌘K's "Ask Teire: …"). */
   queued: string | null;
   setOpen: (open: boolean) => void;
@@ -92,6 +95,7 @@ export function AssistantProvider({ children }: { children: React.ReactNode }) {
   const [context, setContext] = useState<AssistantContext | null>(null);
   const [mentions, setMentions] = useState<Mention[]>([]);
   const [queued, setQueued] = useState<string | null>(null);
+  const [shellSignedIn, setShellSignedIn] = useState(false);
   // The panel mounts on first open and then stays, so its thread survives closing and navigating.
   const [mounted, setMounted] = useState(false);
   const queuedRef = useRef<string | null>(null);
@@ -151,6 +155,8 @@ export function AssistantProvider({ children }: { children: React.ReactNode }) {
       mode,
       context,
       mentions,
+      shellSignedIn,
+      setShellSignedIn,
       queued,
       setOpen,
       setDocked: (docked) => setLayout((l) => ({ ...l, docked })),
@@ -172,7 +178,7 @@ export function AssistantProvider({ children }: { children: React.ReactNode }) {
         return q;
       },
     }),
-    [layout, available, mode, context, mentions, queued, setOpen],
+    [layout, available, mode, context, mentions, shellSignedIn, queued, setOpen],
   );
 
   return (
@@ -193,8 +199,11 @@ export function AssistantProvider({ children }: { children: React.ReactNode }) {
 function AssistantHost({ mounted }: { mounted: boolean }) {
   const a = useAssistant();
   const session = authClient.useSession();
-  if (session.isPending) return null;
-  const signedIn = !!session.data;
+  // Inside the signed-in app shell the server has already said who this is, so Ask Teire doesn't wait
+  // on the client's own session check: a page that aborted that fetch left it pending, and Ask Teire
+  // was missing from repository pages (2026-11-11).
+  const signedIn = a.shellSignedIn || !!session.data;
+  if (!signedIn && session.isPending) return null;
   if (!signedIn && a.mode === "app") return null;
   return (
     <>
@@ -217,6 +226,16 @@ export function AskContext({ kind, id, label }: AssistantContext) {
     setContext({ kind, id, label });
     return () => setContext(null);
   }, [kind, id, label, setContext]);
+  return null;
+}
+
+/** The signed-in app shell says so while it is on screen (rendered only for a signed-in user). */
+export function AssistantSignedIn() {
+  const { setShellSignedIn } = useAssistant();
+  useEffect(() => {
+    setShellSignedIn(true);
+    return () => setShellSignedIn(false);
+  }, [setShellSignedIn]);
   return null;
 }
 

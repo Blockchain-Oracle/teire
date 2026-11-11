@@ -19,7 +19,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import { refreshMyInstallations, switchInstallation } from "@/app/(app)/app/actions";
-import { AssistantMentions } from "@/components/assistant/assistant-provider";
+import { AssistantMentions, AssistantSignedIn } from "@/components/assistant/assistant-provider";
 import { LogoMark } from "@/components/logo";
 import { SignOutButton } from "@/components/sign-in-button";
 import { LiveDot } from "@/components/teire/live-dot";
@@ -406,6 +406,7 @@ export function AppShell({
         ) : null}
         <div className="min-w-0 flex-1 px-4 py-6 md:px-8">{children}</div>
       </SidebarInset>
+      <AssistantSignedIn />
       <AssistantMentions
         mentions={[
           ...data.repos.map((r) => ({ kind: "repo" as const, id: r.fullName, label: r.fullName })),
