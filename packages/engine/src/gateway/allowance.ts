@@ -47,6 +47,8 @@ export interface StartRefusal {
   scope: "user" | "key";
   blocked: boolean;
   leftUsd: number | null;
+  /** What the work needed left to start (what one attempt or reply may hold at once). */
+  needUsd: number;
   resetsAt: Date | null;
   allowance: Allowance | null;
 }
@@ -126,6 +128,7 @@ export async function startRefusal(ai: Ai, needUsd: number): Promise<StartRefusa
         scope: "user",
         blocked: mine.blocked,
         leftUsd: mine.leftUsd,
+        needUsd,
         resetsAt: mine.resetsAt ? new Date(mine.resetsAt) : null,
         allowance: mine,
       };
@@ -134,6 +137,7 @@ export async function startRefusal(ai: Ai, needUsd: number): Promise<StartRefusa
         scope: "key",
         blocked: false,
         leftUsd: key.leftUsd,
+        needUsd,
         resetsAt: key.resetsAt ? new Date(key.resetsAt) : null,
         allowance: null,
       };
@@ -159,17 +163,25 @@ function whose(endUserId: string | null): string {
   if (!endUserId) return "Teire's";
   if (endUserId.startsWith(END_USERS.person.prefix)) return "Your";
   if (endUserId.startsWith(END_USERS.installation.prefix)) return "This installation's";
+  if (endUserId === END_USERS.operator.id) return "The operator walk's";
   return "Teire's shared";
 }
 
-/** What a person reads when work can't start: whose allowance, what is left, and when it comes back. */
+const dollars = (n: number) => `$${n.toFixed(n > 0 && n < 0.1 ? 3 : 2)}`;
+
+/**
+ * What a person reads when work can't start: whose allowance, what is left against what the work
+ * needs to start, and when it comes back.
+ */
 export function refusalSaid(r: StartRefusal, endUserId: string | null): string {
   const back = comesBack(r.resetsAt);
   const when = back ? `; it comes back ${back}` : "";
+  const left = r.leftUsd ?? 0;
   if (r.scope === "key")
-    return `Teire's overall AI budget on Otari is nearly used up ($${(r.leftUsd ?? 0).toFixed(2)} left)${when}.`;
+    return `Teire's overall AI budget on Otari has ${dollars(left)} left, less than this needs to start (${dollars(r.needUsd)})${when}.`;
   if (r.blocked) return `${whose(endUserId)} AI allowance is paused on Otari by Teire's operator.`;
   const limit = r.allowance?.limitUsd;
-  const left = r.leftUsd !== null && limit ? ` ($${r.leftUsd.toFixed(2)} of $${limit.toFixed(2)} left)` : "";
-  return `${whose(endUserId)} AI allowance is used up for now${left}${when}.`;
+  if (left <= 0.0005)
+    return `${whose(endUserId)} AI allowance is used up${limit ? ` (${dollars(limit)} spent)` : ""}${when}.`;
+  return `${whose(endUserId)} AI allowance has ${dollars(left)}${limit ? ` of ${dollars(limit)}` : ""} left, less than this needs to start (${dollars(r.needUsd)})${when}.`;
 }

@@ -98,6 +98,28 @@ export const ALLOWANCE = {
   replyUsd: 0.025,
 } as const;
 
+/**
+ * The researcher (S04): one call in Otari's tool loop before a fix. Measured 2026-11-11 with MiniMax M3:
+ * two searches and a fetch took 26 s and cost $0.045. Context7 is offered over MCP when the workspace
+ * lets a request name MCP servers; Otari's code sandbox reaches PyPI (pip install works, 4 s).
+ */
+export const RESEARCH = {
+  searches: 2,
+  /** Two searches, two fetches and the answer: an unbounded loop read 8 pages for $0.12 in 125 s. */
+  toolIterations: 5,
+  maxOutputTokens: 4_000,
+  timeoutMs: 150_000,
+  maxChanges: 8,
+  maxSources: 8,
+  maxApis: 8,
+  context7Url: "https://mcp.context7.com/mcp",
+  codeTimeoutMs: 90_000,
+  maxProofChars: 4_000,
+  /** The reader shaping the prose into a brief, and how much prose it reads. */
+  shapeMaxTokens: 3_000,
+  maxResearchChars: 12_000,
+} as const;
+
 /** Ask Teire's limits (plan revision 3.3, U4, D127): per reply, per person per day, all of it per day. */
 /**
  * The overall model budget per day (fix runs and chat together), when TEIRE_DAILY_COST_CAP_USD is unset:

@@ -5,7 +5,15 @@ import { normalizeForQuote } from "../catalog/markdown";
 import { sha256 } from "../catalog/source";
 import { NOTES } from "../constants";
 import { type ChangeV2, changeV2, type Ecosystem } from "../contract";
-import { type Ai, receiptOf, type StepReceipt } from "../gateway";
+import {
+  type Ai,
+  GuardrailBlockedError,
+  type GuardrailConfig,
+  noReceipt,
+  receiptOf,
+  type StepReceipt,
+} from "../gateway";
+import { injectionGuardrail, screen } from "../guard/screen";
 import type { NoteSource } from "./sources";
 
 /**
@@ -146,12 +154,57 @@ export interface ExtractionResult {
   receipt: StepReceipt<"notes">;
   promptHash: string;
   error?: string;
+  /** Documents Otari's prompt-injection guardrail refused: left out of the reading. */
+  refused?: NoteSource[];
 }
 
+type NoteContext = { name: string; from: string; to: string; removedApis: string[] };
+
+/**
+ * The documents read in one guarded call: Otari runs Teire's prompt-injection guardrail on them first
+ * and refuses the call if any is flagged. Then each is screened on its own, the flagged ones are left
+ * out (named in `error`, so the scan and run say so) and the rest are read again: one poisoned
+ * changelog never stops the others from being read.
+ */
 export async function extractNotes(
   ai: Ai,
   docs: NoteDocument[],
-  context: { name: string; from: string; to: string; removedApis: string[] },
+  context: NoteContext,
+): Promise<ExtractionResult> {
+  const guard = injectionGuardrail();
+  try {
+    return await extractOnce(ai, docs, context, guard);
+  } catch (error) {
+    if (!(error instanceof GuardrailBlockedError) || !guard) throw error;
+    const verdicts = await Promise.all(docs.map((d) => screen(ai, d.text, "notes-screen")));
+    const refused = docs.filter((_, i) => verdicts[i]?.verdict === "refused");
+    const kept = docs.filter((_, i) => verdicts[i]?.verdict !== "refused");
+    const said = `Otari's prompt-injection guardrail refused ${refused.length || "a"} document(s)${
+      refused.length ? `: ${refused.map((d) => d.title).join(", ")}` : ""
+    }`;
+    if (!refused.length || !kept.length)
+      return {
+        items: [],
+        dropped: [],
+        promptHash: "",
+        error: said,
+        refused: refused.map((d) => d.source),
+        receipt: { step: "notes", model: ai.modelId("reader"), ...noReceipt(), ms: 0 },
+      };
+    const rest = await extractOnce(ai, kept, context, guard);
+    return {
+      ...rest,
+      refused: refused.map((d) => d.source),
+      error: [said, rest.error].filter(Boolean).join("; "),
+    };
+  }
+}
+
+async function extractOnce(
+  ai: Ai,
+  docs: NoteDocument[],
+  context: NoteContext,
+  guard: GuardrailConfig | null,
 ): Promise<ExtractionResult> {
   const started = Date.now();
   // Static instructions first, documents next, the per-run question last: prefix caching works.
@@ -172,7 +225,7 @@ export async function extractNotes(
   let answered: Parameters<typeof receiptOf>[0];
   try {
     const result = await generateText({
-      ...ai.call("reader", { purpose: "notes" }),
+      ...ai.call("reader", { purpose: "notes", ...(guard ? { guardrails: [guard] } : {}) }),
       abortSignal: cancelSignal(),
       system: SYSTEM,
       prompt,

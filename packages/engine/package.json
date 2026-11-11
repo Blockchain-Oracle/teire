@@ -10,6 +10,8 @@
     "./config-keys": "./src/config/keys.ts",
     "./cancel": "./src/cancel.ts",
     "./gateway": "./src/gateway/index.ts",
+    "./guard": "./src/guard/index.ts",
+    "./guard/injection": "./src/guard/injection.ts",
     "./constants": "./src/constants.ts",
     "./catalog": "./src/catalog/index.ts",
     "./contract": "./src/contract.ts",

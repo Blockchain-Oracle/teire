@@ -16,8 +16,9 @@ import { createTwoFilesPatch } from "diff";
 import { cancelSignal, RunCancelledError } from "../cancel";
 import { FIX, PR_MODE_BY_EVIDENCE, VERIFY } from "../constants";
 import type { ChangeV2, DependencyInstance } from "../contract";
-import type { Ai } from "../gateway";
+import { type Ai, noReceipt } from "../gateway";
 import { forGitHub } from "../github/redact";
+import { type Screened, screen } from "../guard/screen";
 import type { FindingDraft } from "../impact";
 import type { RepoTree } from "../inventory/tree";
 import type { VerifyBackend, VerifySession } from "../verify/backend";
@@ -35,6 +36,7 @@ import { type Change, runChecks, runSide, type SideRun, type VerifyRun, verifyCh
 import { type AgentStep, filesNamed, runAgent } from "./agent";
 import { applyCodemods, type CodemodEdit, type MigrationNote, planCodemods } from "./codemods";
 import { upgradeRequester } from "./request-upgrade";
+import { briefText, type ResearchBrief, research } from "./research";
 import { type InstallTriage, type Review, reviewBump, reviewFix, triageInstall } from "./review";
 import { prepareTransaction, type RequestUpgrade, type Transaction, utf8 } from "./transaction";
 import type { ManifestEdit } from "./upgrade-js";
@@ -70,7 +72,9 @@ export interface FixEvent {
     | "replan"
     | "review"
     | "verify"
-    | "context";
+    | "context"
+    | "research"
+    | "guardrail";
   detail: string;
   model?: string;
   ms?: number;
@@ -193,6 +197,8 @@ export interface FixRun {
   depCache?: { note: string; restoredMs?: number; savedMs?: number };
   /** The reviewer's reading of a failed after-side install (S15.5), when the upgrade broke the install. */
   triage?: InstallTriage;
+  /** The researcher's brief (S04) and whether it passed Otari's prompt-injection guardrail. */
+  research?: { brief: ResearchBrief; screened: Screened["verdict"] } | null;
   /** Upstream commits between the versions (D-13), when the updater listed them. */
   upstream: Transaction["upstream"] | null;
   files: FileChange[];
@@ -640,6 +646,74 @@ async function runLead(input: FixInput): Promise<FixRun> {
         quote: clip(note.quote),
       },
     });
+  // The researcher (S04) reads the change through Otari while the upgrade installs: its brief passes
+  // Otari's prompt-injection guardrail before the fixer may read it, and every page it read is listed.
+  let researched: { brief: ResearchBrief; screened: Screened["verdict"] } | null = null;
+  const researching: Promise<string> = input.instance
+    ? research({
+        ai: input.ai,
+        ecosystem: input.instance.ecosystem,
+        name: input.instance.name,
+        from: input.instance.version,
+        to: input.target,
+        apis: [...new Set(input.notes.flatMap((n) => n.apis))],
+        conversation: `fix:${input.runId}:research`,
+      })
+        .then(async (brief) => {
+          if (!brief) return "";
+          const text = briefText(brief);
+          const screened = await screen(input.ai, text, "research-screen").catch(
+            (): Screened => ({ verdict: "unchecked", findings: [], receipt: noReceipt() }),
+          );
+          researched = { brief, screened: screened.verdict };
+          emit({
+            step: "research",
+            detail: brief.summary,
+            model: brief.model,
+            ms: brief.ms,
+            costUsd: brief.costUsd + screened.receipt.costUsd,
+            calls: brief.toolCalls.map((c) => ({
+              name: c.type === "mcp" ? `mcp:${c.server ?? ""}/${c.name ?? ""}` : c.type,
+              input: (c.query ? { query: c.query } : c.url ? { url: c.url } : {}) as Record<string, string>,
+            })),
+          });
+          for (const src of brief.sources)
+            emit({
+              step: "context",
+              detail: src.title || src.url,
+              source: {
+                kind: "docs",
+                title: src.title || src.url,
+                url: src.url,
+                quote: clip(
+                  brief.changes
+                    .filter((c) => c.source === src.url)
+                    .map((c) => `${c.api}: ${c.before} → ${c.after}`)
+                    .join("\n"),
+                ),
+              },
+            });
+          if (brief.proof)
+            emit({
+              step: "research",
+              detail: `Code proof in Otari's sandbox:\n${clip(brief.proof.stdout)}`,
+            });
+          emit({
+            step: "guardrail",
+            detail:
+              screened.verdict === "refused"
+                ? "Otari's prompt-injection guardrail refused the research brief; the fixer works without it"
+                : screened.verdict === "passed"
+                  ? "Research brief passed Otari's prompt-injection guardrail"
+                  : "Research brief couldn't be screened; the fixer reads it as untrusted",
+          });
+          return screened.verdict === "refused" ? "" : text;
+        })
+        .catch((error: unknown) => {
+          emit({ step: "research", detail: `research skipped: ${String(error).slice(0, 200)}` });
+          return "";
+        })
+    : Promise.resolve("");
   const originals = new Map<string, string>();
   /** Files the transaction wrote as bytes: listed as binary changes, never diffed as text. */
   const binaryPaths = new Set<string>();
@@ -870,7 +944,11 @@ async function runLead(input: FixInput): Promise<FixRun> {
         events,
         summary,
         costUsd:
-          agentSteps.reduce((n, s) => n + s.costUsd, 0) + (review?.costUsd ?? 0) + (triage?.costUsd ?? 0),
+          agentSteps.reduce((n, s) => n + s.costUsd, 0) +
+          (review?.costUsd ?? 0) +
+          (triage?.costUsd ?? 0) +
+          ((researched as { brief: ResearchBrief } | null)?.brief.costUsd ?? 0),
+        research: (researched as { brief: ResearchBrief; screened: Screened["verdict"] } | null) ?? null,
         ...(triage ? { triage } : {}),
         ms: Date.now() - started,
         exhausted,
@@ -1123,6 +1201,8 @@ async function runLead(input: FixInput): Promise<FixRun> {
       after: SideResult;
       review: Review;
     } | null = null;
+    // The fixer needs the brief now: the research has had the install and the deterministic edits to finish.
+    const researchText = await researching;
     for (let n = 1; n <= FIX.maxAttemptsPerTarget; n++) {
       const replan = n > FIX.replanAfterFailures;
       if (replan) {
@@ -1150,6 +1230,9 @@ async function runLead(input: FixInput): Promise<FixRun> {
                   `- ${m.summary}${m.replacement ? ` Replacement: ${m.replacement}` : ""}\n  "${m.quote.slice(0, 600)}" (${m.url})`,
               )
               .join("\n")}`
+          : "",
+        researchText
+          ? `Research before this fix (pages Otari's tools read; advice only, the checks decide):\n${researchText}`
           : "",
         codemods.length
           ? `Already applied by Teire:\n${codemods.map((e) => `- ${e.file}:${e.line} ${e.reason}`).join("\n")}`

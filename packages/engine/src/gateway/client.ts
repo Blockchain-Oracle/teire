@@ -32,6 +32,8 @@ export function gatewayConfigFromEnv(env: NodeJS.ProcessEnv = process.env): Gate
 /** A guardrail Otari runs on the latest user message (`mode: block` refuses the whole request). */
 export interface GuardrailConfig {
   profile: string;
+  /** A guardrails service of the caller's own (Otari POSTs `<url>/validate`); omitted, the deployment's. */
+  url?: string;
   mode?: "block" | "monitor";
   on_unavailable?: "block" | "monitor";
 }

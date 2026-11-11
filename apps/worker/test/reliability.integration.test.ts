@@ -167,7 +167,7 @@ describe.skipIf(!url)("reliability (Postgres)", () => {
     const block = await modelWorkBlocked(db, otariWith(2.95), 0.15);
     expect(block?.scope).toBe("user");
     expect(block?.reason).toMatch(
-      /This installation's AI allowance is used up for now \(\$0\.05 of \$3\.00 left\)/,
+      /This installation's AI allowance has \$0\.050 of \$3\.00 left, less than this needs to start \(\$0\.15\)/,
     );
     expect(block?.resetsAt).toBeInstanceOf(Date);
   });

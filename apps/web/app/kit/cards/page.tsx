@@ -137,6 +137,7 @@ async function Board() {
         scope: "user",
         blocked: false,
         leftUsd: 0.004,
+        needUsd: 0.025,
         resetsAt: new Date(new Date().setUTCHours(24, 0, 0, 0)),
         allowance: { limitUsd: 0.5 } as Allowance,
       },
