@@ -60,7 +60,7 @@ export interface ApiAssessment {
   records: ChangeV2[];
   /** Providers found with no reader: candidates looked at, Otari web calls, and why any found nothing. */
   discovery: { candidates: number; usage: WebUsage[]; notes: string[] };
-  /** Nemotron readings that traced wrapped model IDs (empty without `triage`). */
+  /** Reader-model readings that traced wrapped model IDs (empty without `triage`). */
   receipts: TriageReceipt[];
   /** What the OpenAPI comparison looked at per host, or why it compared nothing. */
   openapiNotes: string[];
@@ -77,7 +77,7 @@ export interface ApiSources {
    * registry access for reading the SDKs, and the discovery cache. Omitted, only the curated readers apply.
    */
   discover?: RegistryOptions & { cacheDir?: string };
-  /** Nemotron for model IDs the syntax cannot place (registries, wrappers). Omitted, they stay inconclusive. */
+  /** The reader model, for model IDs the syntax cannot place (registries, wrappers). Omitted, they stay inconclusive. */
   triage?: PageReader;
   /** OpenAPI diffs for operations the repo calls by URL (spec lookup, the repo's history). */
   openapi?: OpenApiOptions;

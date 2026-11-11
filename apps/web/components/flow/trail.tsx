@@ -32,7 +32,7 @@ const shape = (first: boolean) =>
 
 /**
  * A segment says the one thing that step adds: the figure where the step is generic (your code → "15
- * call sites", checks → "3/3 → 3/3", the sandbox → "Token Factory"), the name where it is the point
+ * call sites", checks → "3/3 → 3/3", the sandbox → "Cloudflare"), the name where it is the point
  * (the package, the updater, the model); the PR as "PR #20". The full words are in its popover.
  */
 function words(t: FlowTile): { main: string; sub?: string } {

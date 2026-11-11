@@ -14,7 +14,7 @@ import { type FindingDraft, priorityOf } from "./index";
 /**
  * Triage of ambiguous model-ID sites (card C3 step 5): a retired model ID the syntax cannot place,
  * because it sits in a registry or wrapper (`quick: { id: "llama-3.1-8b-instant" }`) rather than in
- * a `model:` argument. Nemotron 3 Ultra reads the file and the files that import it and says, per
+ * a `model:` argument. The reader model reads the file and the files that import it and says, per
  * site, whether the value reaches a request's model. Code checks the answer: the cited line must
  * exist in a file it was shown and must pass something to a model parameter. A "yes" that passes
  * makes the site decisive (resolution "traced"); anything else leaves it inconclusive for a human.
@@ -198,7 +198,7 @@ export async function triageModelSites(input: {
       reachability: "function-reachable" as const,
       priority: priorityOf(r, "affected", now),
       callSites: sites,
-      reason: `${f.reason.replace(/ \d+ mention\(s\), none passed as a model: check by hand\.$/, "")} Traced by Nemotron to the request's model: ${how.map((h) => `${h?.evidence} (${h?.reason})`).join("; ")}.`,
+      reason: `${f.reason.replace(/ \d+ mention\(s\), none passed as a model: check by hand\.$/, "")} Traced to the request's model by reading the code: ${how.map((h) => `${h?.evidence} (${h?.reason})`).join("; ")}.`,
     };
   });
   return { findings, receipts };

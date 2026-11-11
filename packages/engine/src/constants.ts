@@ -632,7 +632,7 @@ export const VERIFY = {
   uploadTimeoutMs: 5 * 60_000,
 } as const;
 
-/** Release notes read by Nemotron 3 Ultra (S02a task 8). */
+/** Release notes read by the reader model (S02a task 8). */
 export const NOTES = {
   /** Total text sent to the model per upgrade (~20k tokens). */
   maxCharsToModel: 80_000,

@@ -8,7 +8,7 @@ import { type Scope, scopeRaw } from "./workspace";
 
 /**
  * Many runs as the run page draws them (plan revision 3.4, V4: a PR's breadcrumb trail), in four
- * queries whatever the count: the runs in scope, their reach, their events and their Nemotron calls.
+ * queries whatever the count: the runs in scope, their reach, their events and their model calls.
  * Each input is what `runFlow` needs, so a trail and the run canvas never disagree.
  */
 type Verification = { baseline?: LedgerCheck[]; after?: LedgerCheck[] } | null;

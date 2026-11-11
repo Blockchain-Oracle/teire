@@ -17,7 +17,7 @@ import { injectionGuardrail, screen } from "../guard/screen";
 import type { NoteSource } from "./sources";
 
 /**
- * Nemotron 3 Ultra reads the sliced notes (card C2, D46): only to catch what the type diff cannot
+ * The reader model reads the sliced notes (card C2, D46): only to catch what the type diff cannot
  * see (behaviour, defaults, runtime requirements) and to pair removed APIs with their replacements
  * for the fix. Every item must quote one document verbatim; code checks the quote against the text
  * that was fetched, and anything that fails is dropped with its reason. What passes is a candidate

@@ -247,7 +247,7 @@ interface DocHit {
 }
 
 /**
- * Nemotron didn't answer (Token Factory down, the time limit): said plainly, with Retry and the docs'
+ * The model didn't answer (Otari refused or a host was down, the time limit): said plainly, with Retry and the docs'
  * search results for the question, labelled as search results, not as an answer (U4 "model down").
  */
 function ModelDown({ question, onRetry }: { question: string; onRetry: () => void }) {

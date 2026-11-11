@@ -45,7 +45,7 @@ export interface IngestOptions {
   fetchImpl?: typeof fetch;
   /** "Today" for already-broken vs breaks-on-date. */
   now?: Date;
-  /** Nemotron for discovered pages (`adapter: "discovered"`); without it those pages are not read. */
+  /** The reader model, for discovered pages (`adapter: "discovered"`); without it those pages are not read. */
   reader?: PageReader;
 }
 
@@ -78,7 +78,7 @@ export async function ingestProvider(
   const dropped: ProviderIngest["dropped"] = [];
   for (const source of provider.sources) {
     if (source.adapter === "discovered") {
-      // A nominated page: Teire's own guarded copy, read by Nemotron, quotes checked against it.
+      // A nominated page: Teire's own guarded copy, read by the reader model, quotes checked against it.
       if (!options.reader) {
         outcomes.push({
           url: source.url,

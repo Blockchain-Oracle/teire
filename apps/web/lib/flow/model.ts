@@ -30,7 +30,7 @@ export interface FlowTile {
   id: string;
   entity: FlowEntity;
   state: FlowState;
-  /** One to three words under the tile ("Nemotron 3 Ultra", "Your checks"). */
+  /** One to three words under the tile ("GLM 5.3", "Your checks"). */
   label: string;
   /** A short figure on the tile's chip ("22 calls", "4/4", "#30"). */
   meta?: string;
@@ -142,7 +142,7 @@ export interface RunFlowInput extends RunForProof {
   /** A short name for the change's tile (`zod`, `gpt-4.1-nano`). */
   subjectLabel: string;
   repo: { fullName: string; avatar?: string };
-  /** The Nemotron agent edited code (an `agent` step ran): its calls, and its attempts when known. */
+  /** The fixer agent edited code (an `agent` step ran): its calls, and its attempts when known. */
   agent?: { calls: number; attempts?: number } | null;
   /** Deterministic edits ran (a `codemod` step). Neither this nor the agent: no code edits. */
   codemod?: boolean;
