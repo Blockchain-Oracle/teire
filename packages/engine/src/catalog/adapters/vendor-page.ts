@@ -2,7 +2,8 @@ import { generateText, NoObjectGeneratedError, Output } from "ai";
 import { z } from "zod";
 import { cancelSignal } from "../../cancel";
 import { DISCOVERY } from "../../constants";
-import { type Ai, receiptOf, type StepReceipt } from "../../gateway";
+import { type Ai, GuardrailBlockedError, noReceipt, receiptOf, type StepReceipt } from "../../gateway";
+import { injectionGuardrail } from "../../guard/screen";
 import { quoteInSource } from "../../notes/extract";
 import { CATALOG_SCHEMA_VERSION, type ChangeKind, type ChangeRecord, changeId } from "../schema";
 import type { FetchedSource } from "../source";
@@ -147,6 +148,7 @@ export async function readVendorPage(
   receipts: ReaderReceipt[];
 }> {
   const model = reader.ai.modelId("reader");
+  const guard = injectionGuardrail();
   const records: ChangeRecord[] = [];
   const dropped: { item: PageItem; reason: string }[] = [];
   const receipts: ReaderReceipt[] = [];
@@ -158,7 +160,9 @@ export async function readVendorPage(
     const compute = async () => {
       try {
         const result = await generateText({
-          ...reader.ai.call("reader", { purpose: "read-page" }),
+          // A vendor page is written outside the repository: Otari runs Teire's prompt-injection
+          // guardrail on it first and refuses the read when it is flagged.
+          ...reader.ai.call("reader", { purpose: "read-page", ...(guard ? { guardrails: [guard] } : {}) }),
           abortSignal: cancelSignal(),
           system: SYSTEM,
           prompt,
@@ -168,6 +172,22 @@ export async function readVendorPage(
         const receipt = receiptOf(result);
         return { value: { items: result.output.items, receipt }, costUsd: receipt.costUsd };
       } catch (error) {
+        // A page the guardrail refused yields nothing; its verdict stays on the receipt.
+        if (error instanceof GuardrailBlockedError) {
+          const receipt = {
+            ...noReceipt(),
+            requestId: error.requestId,
+            guardrails: error.guardrails.map((g) => ({
+              profile: g.profile,
+              mode: "block",
+              valid: false,
+              score: g.score ?? null,
+              status: "evaluated",
+              ...(g.explanation ? { reason: g.explanation } : {}),
+            })),
+          };
+          return { value: { items: [] as PageItem[], receipt }, costUsd: 0 };
+        }
         // An answer that does not parse is paid for and yields nothing (never a guess).
         if (!NoObjectGeneratedError.isInstance(error)) throw error;
         const receipt = receiptOf({ usage: error.usage, response: error.response });

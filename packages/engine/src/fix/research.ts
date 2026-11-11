@@ -110,14 +110,18 @@ async function ask(input: ResearchInput, withMcp: boolean) {
   });
 }
 
-/** Every page Otari's tools returned or read in the loop: the only URLs a brief may cite. */
-function sourcesOf(calls: OtariToolCall[]): ResearchSource[] {
+/** Every page Otari's tools returned in the loop (a brief may cite these), and the ones it fetched. */
+function sourcesOf(calls: OtariToolCall[]): { returned: ResearchSource[]; fetched: Set<string> } {
   const seen = new Map<string, string>();
+  const fetched = new Set<string>();
   for (const c of calls) {
-    if (c.type === "web_fetch" && c.url) seen.set(c.url, seen.get(c.url) ?? "");
+    if (c.type === "web_fetch" && c.url) {
+      fetched.add(c.url);
+      seen.set(c.url, seen.get(c.url) ?? "");
+    }
     for (const s of c.sources ?? []) if (!seen.get(s.url)) seen.set(s.url, s.title ?? "");
   }
-  return [...seen.entries()].map(([url, title]) => ({ url, title }));
+  return { returned: [...seen.entries()].map(([url, title]) => ({ url, title })), fetched };
 }
 
 /** The brief, or null when the researcher found nothing to say (the run goes on without it). */
@@ -136,7 +140,7 @@ export async function research(input: ResearchInput): Promise<ResearchBrief | nu
     result = await ask(input, false);
   }
   const receipt = receiptOf(result);
-  const read = sourcesOf(receipt.toolCalls);
+  const { returned: read, fetched } = sourcesOf(receipt.toolCalls);
   const text = result.text.trim();
   if (!text) return null;
   // The reader gives the prose its shape, citing only pages the loop actually returned.
@@ -147,6 +151,7 @@ export async function research(input: ResearchInput): Promise<ResearchBrief | nu
     maxRetries: 1,
     prompt: [
       `Turn this research on ${input.name} ${input.from ?? ""} → ${input.to} into a brief.`,
+      "The summary is two or three plain sentences about what changed and what callers must do; never about the research itself.",
       "Keep only what the research states; each change's source must be one of these URLs:",
       read.map((s) => s.url).join("\n") || "(none)",
       "",
@@ -161,10 +166,10 @@ export async function research(input: ResearchInput): Promise<ResearchBrief | nu
   return {
     summary: brief.summary,
     changes: brief.changes.map((c) => ({ ...c, source: allowed.has(c.source) ? c.source : "" })),
-    sources: (read.length ? read : brief.sources.filter((s) => allowed.has(s.url))).slice(
-      0,
-      RESEARCH.maxSources,
-    ),
+    // Pages the loop fetched, and any page a change cites: a search result nobody read isn't a source.
+    sources: read
+      .filter((src) => fetched.has(src.url) || brief.changes.some((c) => c.source === src.url))
+      .slice(0, RESEARCH.maxSources),
     toolCalls: receipt.toolCalls,
     mcp: withMcp,
     proof,
