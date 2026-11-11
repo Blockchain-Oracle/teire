@@ -230,7 +230,13 @@ export async function POST(request: Request) {
         if (part.type === "start") return { createdAt: Date.now(), model };
         if (part.type === "finish") {
           const r = receipt();
-          return { tokensIn: r.tokensIn, tokensOut: r.tokensOut, costUsd: Number(r.costUsd.toFixed(5)) };
+          // The model Otari served (`Otari-Model`); `model` may be a routing policy's name.
+          return {
+            model: r.servedModel ?? model,
+            tokensIn: r.tokensIn,
+            tokensOut: r.tokensOut,
+            costUsd: Number(r.costUsd.toFixed(5)),
+          };
         }
         return undefined;
       },
@@ -252,6 +258,7 @@ export async function POST(request: Request) {
             // Its cost too, also when it stopped before the finish part carried it.
             responseMessage.metadata = {
               ...responseMessage.metadata,
+              model: answered,
               tokensIn: r.tokensIn,
               tokensOut: r.tokensOut,
               costUsd: Number(r.costUsd.toFixed(5)),
