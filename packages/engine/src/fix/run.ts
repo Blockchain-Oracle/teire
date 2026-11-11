@@ -646,74 +646,75 @@ async function runLead(input: FixInput): Promise<FixRun> {
         quote: clip(note.quote),
       },
     });
-  // The researcher (S04) reads the change through Otari while the upgrade installs: its brief passes
+  // The researcher (S04) reads the change through Otari before the fixer starts: its brief passes
   // Otari's prompt-injection guardrail before the fixer may read it, and every page it read is listed.
   let researched: { brief: ResearchBrief; screened: Screened["verdict"] } | null = null;
-  const researching: Promise<string> = input.instance
-    ? research({
-        ai: input.ai,
-        ecosystem: input.instance.ecosystem,
-        name: input.instance.name,
-        from: input.instance.version,
-        to: input.target,
-        apis: [...new Set(input.notes.flatMap((n) => n.apis))],
-        conversation: `fix:${input.runId}:research`,
-      })
-        .then(async (brief) => {
-          if (!brief) return "";
-          const text = briefText(brief);
-          const screened = await screen(input.ai, text, "research-screen").catch(
-            (): Screened => ({ verdict: "unchecked", findings: [], receipt: noReceipt() }),
-          );
-          researched = { brief, screened: screened.verdict };
-          emit({
-            step: "research",
-            detail: brief.summary,
-            model: brief.model,
-            ms: brief.ms,
-            costUsd: brief.costUsd + screened.receipt.costUsd,
-            calls: brief.toolCalls.map((c) => ({
-              name: c.type === "mcp" ? `mcp:${c.server ?? ""}/${c.name ?? ""}` : c.type,
-              input: (c.query ? { query: c.query } : c.url ? { url: c.url } : {}) as Record<string, string>,
-            })),
-          });
-          for (const src of brief.sources)
-            emit({
-              step: "context",
-              detail: src.title || src.url,
-              source: {
-                kind: "docs",
-                title: src.title || src.url,
-                url: src.url,
-                quote: clip(
-                  brief.changes
-                    .filter((c) => c.source === src.url)
-                    .map((c) => `${c.api}: ${c.before} → ${c.after}`)
-                    .join("\n"),
-                ),
-              },
-            });
-          if (brief.proof)
+  const startResearch = (): Promise<string> =>
+    input.instance
+      ? research({
+          ai: input.ai,
+          ecosystem: input.instance.ecosystem,
+          name: input.instance.name,
+          from: input.instance.version,
+          to: input.target,
+          apis: [...new Set(input.notes.flatMap((n) => n.apis))],
+          conversation: `fix:${input.runId}:research`,
+        })
+          .then(async (brief) => {
+            if (!brief) return "";
+            const text = briefText(brief);
+            const screened = await screen(input.ai, text, "research-screen").catch(
+              (): Screened => ({ verdict: "unchecked", findings: [], receipt: noReceipt() }),
+            );
+            researched = { brief, screened: screened.verdict };
             emit({
               step: "research",
-              detail: `Code proof in Otari's sandbox:\n${clip(brief.proof.stdout)}`,
+              detail: brief.summary,
+              model: brief.model,
+              ms: brief.ms,
+              costUsd: brief.costUsd + screened.receipt.costUsd,
+              calls: brief.toolCalls.map((c) => ({
+                name: c.type === "mcp" ? `mcp:${c.server ?? ""}/${c.name ?? ""}` : c.type,
+                input: (c.query ? { query: c.query } : c.url ? { url: c.url } : {}) as Record<string, string>,
+              })),
             });
-          emit({
-            step: "guardrail",
-            detail:
-              screened.verdict === "refused"
-                ? "Otari's prompt-injection guardrail refused the research brief; the fixer works without it"
-                : screened.verdict === "passed"
-                  ? "Research brief passed Otari's prompt-injection guardrail"
-                  : "Research brief couldn't be screened; the fixer reads it as untrusted",
-          });
-          return screened.verdict === "refused" ? "" : text;
-        })
-        .catch((error: unknown) => {
-          emit({ step: "research", detail: `research skipped: ${String(error).slice(0, 200)}` });
-          return "";
-        })
-    : Promise.resolve("");
+            for (const src of brief.sources)
+              emit({
+                step: "context",
+                detail: src.title || src.url,
+                source: {
+                  kind: "docs",
+                  title: src.title || src.url,
+                  url: src.url,
+                  quote: clip(
+                    brief.changes
+                      .filter((c) => c.source === src.url)
+                      .map((c) => `${c.api}: ${c.before} → ${c.after}`)
+                      .join("\n"),
+                  ),
+                },
+              });
+            if (brief.proof)
+              emit({
+                step: "research",
+                detail: `Code proof in Otari's sandbox:\n${clip(brief.proof.stdout)}`,
+              });
+            emit({
+              step: "guardrail",
+              detail:
+                screened.verdict === "refused"
+                  ? "Otari's prompt-injection guardrail refused the research brief; the fixer works without it"
+                  : screened.verdict === "passed"
+                    ? "Research brief passed Otari's prompt-injection guardrail"
+                    : "Research brief couldn't be screened; the fixer reads it as untrusted",
+            });
+            return screened.verdict === "refused" ? "" : text;
+          })
+          .catch((error: unknown) => {
+            emit({ step: "research", detail: `research skipped: ${String(error).slice(0, 200)}` });
+            return "";
+          })
+      : Promise.resolve("");
   const originals = new Map<string, string>();
   /** Files the transaction wrote as bytes: listed as binary changes, never diffed as text. */
   const binaryPaths = new Set<string>();
@@ -1201,8 +1202,9 @@ async function runLead(input: FixInput): Promise<FixRun> {
       after: SideResult;
       review: Review;
     } | null = null;
-    // The fixer needs the brief now: the research has had the install and the deterministic edits to finish.
-    const researchText = await researching;
+    // Only a run the deterministic edits didn't finish reaches the fixer, and only it is researched:
+    // a plain version bump never pays for a brief nobody reads.
+    const researchText = await startResearch();
     for (let n = 1; n <= FIX.maxAttemptsPerTarget; n++) {
       const replan = n > FIX.replanAfterFailures;
       if (replan) {
