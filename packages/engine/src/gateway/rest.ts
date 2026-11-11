@@ -93,7 +93,8 @@ export function createOtariRest(config: { apiKey: string; baseURL: string }, fet
 
     /**
      * Put an end user on one of the key's budgets, creating it if needed (the operator raising or
-     * lowering someone's allowance). Otari restarts its period on the new budget.
+     * lowering someone's allowance). On a calendar-aligned budget the period stays the calendar day,
+     * so what it spent today carries over (checked 2026-11-11: $2.84 stayed after a move from $3 to $1).
      */
     async putEndUser(externalId: string, budgetId: string) {
       const { data, error, response } = await client.PUT("/api/v1/end-users", {
