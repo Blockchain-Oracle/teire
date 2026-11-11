@@ -1,6 +1,6 @@
 <p align="center">
-  <a href="https://teire.vercel.app">
-    <img src="https://raw.githubusercontent.com/teire-dev/teire/main/.github/assets/banner-dark.png" width="960" alt="Teire. When upstream breaks, Teire fixes your code. A real Teire fix runs from an upstream change to a tested pull request." />
+  <a href="https://teire.84.46.247.92.sslip.io">
+    <img src="https://raw.githubusercontent.com/Blockchain-Oracle/teire/otari/.github/assets/banner-dark.png" width="960" alt="Teire. When upstream breaks, Teire fixes your code. A real Teire fix runs from an upstream change to a tested pull request." />
   </a>
 </p>
 
@@ -8,15 +8,15 @@
 <p align="center"><b>When upstream breaks, Teire fixes your code.</b></p>
 
 <p align="center">
-  <a href="https://teire.vercel.app"><b>App</b></a>
+  <a href="https://teire.84.46.247.92.sslip.io"><b>App</b></a>
   &nbsp;·&nbsp;
-  <a href="https://teire.vercel.app/docs/build/cli"><b>CLI docs</b></a>
+  <a href="https://teire.84.46.247.92.sslip.io/docs/build/cli"><b>CLI docs</b></a>
   &nbsp;·&nbsp;
-  <a href="https://teire.vercel.app/docs/build/mcp"><b>MCP docs</b></a>
+  <a href="https://teire.84.46.247.92.sslip.io/docs/build/mcp"><b>MCP docs</b></a>
   &nbsp;·&nbsp;
-  <a href="https://teire.vercel.app/docs/build/agent-skill"><b>Agent Skill</b></a>
+  <a href="https://teire.84.46.247.92.sslip.io/docs/build/agent-skill"><b>Agent Skill</b></a>
   &nbsp;·&nbsp;
-  <a href="https://github.com/teire-dev/teire"><b>Source</b></a>
+  <a href="https://github.com/Blockchain-Oracle/teire"><b>Source</b></a>
 </p>
 
 ## Teire in your terminal
@@ -83,10 +83,10 @@ Affected (2)
 
 ## For coding agents
 
-Install the [Teire Agent Skill](https://teire.vercel.app/docs/build/agent-skill) to teach a coding agent when and how to run the CLI:
+Install the [Teire Agent Skill](https://teire.84.46.247.92.sslip.io/docs/build/agent-skill) to teach a coding agent when and how to run the CLI:
 
 ```bash
-npx skills add teire-dev/teire --skill teire-cli
+npx skills add Blockchain-Oracle/teire --skill teire-cli
 ```
 
 The Skills CLI needs Node.js 22.20 or newer. The skill is instructions for the agent. The CLI runs the scan; the MCP server gives agents the same read-only scan and catalog tools over stdio. To connect MCP directly:
@@ -108,7 +108,7 @@ The agent can then scan the repository it is editing, ask why a finding matters 
 ## Where the answers come from
 
 - **Packages.** Teire reads the registries directly and diffs the API surface of your installed version against the target. That uses the same tools the service runs: TypeScript declarations, griffe for Python, apidiff for Go, cargo-semver-checks for Rust, Prism for Ruby, and japicmp for JVM bytecode. It locates every use in your code. Security advisories come from OSV (which carries RustSec and the Go vulnerability database), GitHub's advisory database and ruby-advisory-db.
-- **API hosts and models.** Teire answers from its public catalog, where each change is confirmed against a quote from the provider's own page. For a provider the service hasn't read yet, the CLI reads that provider's pages itself through the same quote gate. Hand-written readers (OpenAI, Anthropic, Google Gemini, Nebius Token Factory, Stripe) need no key. Discovered providers need Nemotron (`TOKENFACTORY_API_KEY`).
+- **API hosts and models.** Teire answers from its public catalog, where each change is confirmed against a quote from the provider's own page. For a provider the service hasn't read yet, the CLI reads that provider's pages itself through the same quote gate. Hand-written readers (OpenAI, Anthropic, Google Gemini, Nebius Token Factory, Stripe) need no key. Discovered providers are found and read through Otari (`OTARI_API_KEY`).
 - **Runtimes.** End-of-life dates for the Node.js and Python versions the repo pins.
 
 If a toolchain is missing, the scan says which one and how to get it. It never guesses past one.
@@ -127,7 +127,7 @@ If a toolchain is missing, the scan says which one and how to get it. It never g
 | `GITHUB_TOKEN`         | Higher GitHub rate limits (release notes, advisories, spec history)                                     |
 | `TOKENFACTORY_API_KEY` | Nemotron traces model IDs passed through wrappers and registries, and reads discovered providers' pages |
 | `TAVILY_API_KEY`       | Searches for the notices of an API host neither the catalog nor the hand-written readers cover          |
-| `TEIRE_URL`            | Another Teire deployment (default `https://teire.vercel.app`)                                           |
+| `TEIRE_URL`            | Another Teire deployment (default `https://teire.84.46.247.92.sslip.io`)                                           |
 
 `.github/teire.yml` (or `teire.yml`) is honoured as the service honours it: `ignore`, `ecosystems`, `paths`, `ignorePaths`, `upgrades.cooldownDays` and declared `sources`.
 
