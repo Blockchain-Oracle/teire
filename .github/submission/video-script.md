@@ -21,7 +21,7 @@ Every model call goes through Otari, Mozilla's AI gateway. Think of it as the sw
 open-weight models, each with one job. GLM writes the fixes. DeepSeek Pro reviews them. DeepSeek Flash reads release
 notes. MiniMax researches. And gpt-oss answers your questions. Each job has a routing policy on Otari: backups when a
 host fails, a cheaper model when money runs low. Otari also keeps an allowance for every person and repo, and checks
-every page for tricks before a model reads it.
+every page for tricks before a model reads it. Its tools do the reading: web search, page fetch and MCP.
 
 4 · THE PROBLEM · 0:48
    [OpenAI's deprecations page → github.com/meridianlabs-ai/inspect_ai/issues/601 → github.com/yegor256/gitted/issues/176]
@@ -46,7 +46,7 @@ own.
 7 · THE FEATURES · 1:30
    [the dashboard's overview]
 
-Now I'll walk you through the features, in the order you'd meet them: the scan, the fix, the proof, the research, the
+Now I'll walk you through the features, in the order you'd meet them: the scan, the fix, the proof, Otari's tools, the
 guardrail, and allowances, with Ask Teire.
 
 8 · THE SCAN · 1:40
@@ -68,12 +68,12 @@ The proof. Let's confirm it. Same tests, before and after: a hundred and forty-t
 with the network cut off. DeepSeek Pro reviewed the diff. The receipt shows every model, the host Otari picked, and the
 cost: five cents, billed to this repo's own allowance. It matches. You don't have to trust me, or the model.
 
-11 · THE RESEARCH · 2:27
-   [the zod 3 → 4 run on teire-demo-examples → Context: Researcher read (zod.dev's migration guide)]
+11 · OTARI'S TOOLS · 2:27
+   [the zod 3 → 4 run → the zod tile → Context: "Through Otari's tools" (three web searches, two page fetches) → "Researcher read"]
 
-The research. For a bigger upgrade, like zod from three to four, MiniMax goes first. Through Otari,
-it searches the web, reads the migration guide, and writes the fixer a brief. Every page it read is listed here. For a
-Python package, it installs both versions in Otari's code sandbox and prints what changed.
+Otari's tools. For a bigger upgrade, like zod from three to four, MiniMax researches first, with Otari's own tools.
+Here they are: three web searches and two page fetches, run inside Otari, and the migration guide it read, with
+each change it found. The fixer gets that brief, so it doesn't have to guess.
 
 12 · THE GUARDRAIL · 2:45
    [npm-zod/VENDOR-NOTES.md on GitHub → the zod run page, Context: "Refused by Otari's guardrail" → PR #25]
@@ -83,12 +83,12 @@ that runs on install. Before any model reads it, Otari runs Teire's prompt-injec
 carries on with zod's real release notes.
 
 13 · ALLOWANCES AND ASK TEIRE · 2:59
-   [Settings › Allowances → the meters → move yourself to teire-walk-tiny → Ask Teire: "What needs me today?" → the refusal → move back → ask again]
+   [Settings › Allowances → the meters → move yourself to teire-walk-tiny → Ask Teire: "What needs me today?" → the refusal → move back → ask again → the docs: Ask Teire "How does Teire prove a fix?" → "through Otari: MCP teire/search_docs" under the answer]
 
 Allowances. Every call is billed on Otari to whoever it's for: fifty cents a day for me, three dollars for my
 installation. Watch this. I move myself to a tiny budget and ask Teire what needs me today. It says my allowance is
-used up, and when it comes back. Nobody else stops. I move myself back, ask again, and Ask Teire answers with the
-dashboard's own cards. It only changes something when I click confirm.
+used up, and when it comes back. Nobody else stops. I move myself back, and it answers with the dashboard's own cards.
+In the docs, Ask Teire uses MCP: Otari calls Teire's own MCP server, and the answer names the call.
 
 14 · THE REST · 3:24
    [the Dashboard issue → an @teire comment → /changes → /api/mcp]
@@ -97,15 +97,15 @@ And the rest, quickly. Every repo gets a Dashboard issue with its deadlines, and
 lists every shutdown Teire has read. And for developers, a CLI for CI, and an MCP server for your coding agent.
 
 15 · UNDER THE HOOD · 3:37
-   [otari.ai dashboard → Routing: the teire policies → usage by end user and model → the trust page's ceiling]
+   [otari.ai dashboard → Routing: the teire policies → Requests: each call's end user, model and policy → Spend & budgets]
 
-Under the hood, here's Otari's own dashboard: each job's policy, every call, which model answered, which person or
-repo paid, and one ceiling over all of it.
+Under the hood, here's Otari's own dashboard: a routing policy per job, every request with the person or repo who paid,
+the model that answered, and the budgets that cap them.
 
-16 · DOCS AND X · 3:45
-   [the docs → Teire on Otari → x.com/HANDLE]
+16 · DOCS · 3:45
+   [the docs → Teire on Otari]
 
-It's all in the docs, linked below this video. And follow us on X, at HANDLE.
+It's all in the docs, linked below this video, with every Otari feature and where the code uses it.
 
 17 · CLOSE · 3:51
    [the live app's hero, full face]
@@ -114,6 +114,6 @@ It's live right now, and it's open source. Teire — when upstream breaks, Teire
 
 ---
 Have ready
-- Signed in as yourself; you're the operator, so Settings › Allowances shows every end user and the Move buttons. Rehearse part 13 once: move yourself to teire-walk-tiny, ask, then back to teire-person-daily.
-- Parts 11 and 12 use the zod run: https://teire.84.46.247.92.sslip.io/runs/2f804cf8-de46-4de7-aca8-a0769d82b320?tile=change (Context shows "Researcher read" and "Refused by Otari's guardrail"; PR #25's body and receipt show the refusal and the routing policies).
-- Fill in HANDLE (Teire has no X account yet), or cut the X line.
+- Signed in as yourself; you're the operator, so Settings › Allowances shows every end user and the Move buttons.
+- Part 11: the zod run https://teire-otari.vercel.app/runs/2f804cf8-de46-4de7-aca8-a0769d82b320?tile=change
+- Part 15: otari.ai signed in, Default workspace.

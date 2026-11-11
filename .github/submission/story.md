@@ -59,7 +59,7 @@ opened ready, model total $0.053, billed by Otari to that installation's own all
   guardrail in block mode; Otari runs it before any model reads them. A demo repository plants an
   instruction to the AI in a changelog: on the zod run Otari refused it, Teire read zod's own
   release notes without it, and PR #25 upgraded zod with 4/4 tests passing; the PR's body says what
-  was refused (https://teire.84.46.247.92.sslip.io/runs/2f804cf8-de46-4de7-aca8-a0769d82b320?tile=change).
+  was refused (https://teire-otari.vercel.app/runs/2f804cf8-de46-4de7-aca8-a0769d82b320?tile=change).
 
 ## Proof
 
@@ -72,9 +72,9 @@ opened ready, model total $0.053, billed by Otari to that installation's own all
   [#25](https://github.com/Blockchain-Oracle/teire-demo-examples/pull/25) (zod 3 → 4, with Otari's
   guardrail refusing a planted changelog on the way).
 - The models were chosen by measuring six open-weight models on Teire's own fix and extraction jobs
-  through Otari ([Evaluation](https://teire.84.46.247.92.sslip.io/docs/otari/evaluation)).
-- Live app: https://teire.84.46.247.92.sslip.io · docs: https://teire.84.46.247.92.sslip.io/docs/otari
-  · status: https://teire.84.46.247.92.sslip.io/trust
+  through Otari ([Evaluation](https://teire-otari.vercel.app/docs/otari/evaluation)).
+- Live app: https://teire-otari.vercel.app · docs: https://teire-otari.vercel.app/docs/otari
+  · status: https://teire-otari.vercel.app/trust
 
 ## Built with
 

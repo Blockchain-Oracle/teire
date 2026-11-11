@@ -29,15 +29,15 @@ Every one is used by the running application, not only enabled in the dashboard:
 
 | Rubric feature | How Teire uses it | Proof |
 |---|---|---|
-| Open-weight models (×5, different purposes) | GLM 5.3 fixes code, DeepSeek V4 Pro reviews, DeepSeek V4.1 Flash reads release notes and provider pages, MiniMax M3 researches, gpt-oss-120b answers Ask Teire | Receipt of https://github.com/Blockchain-Oracle/teire-demo-bristow/pull/8 · https://teire.84.46.247.92.sslip.io/docs/otari/evaluation |
+| Open-weight models (×5, different purposes) | GLM 5.3 fixes code, DeepSeek V4 Pro reviews, DeepSeek V4.1 Flash reads release notes and provider pages, MiniMax M3 researches, gpt-oss-120b answers Ask Teire | Receipt of https://github.com/Blockchain-Oracle/teire-demo-bristow/pull/8 · https://teire-otari.vercel.app/docs/otari/evaluation |
 | Multiple models serving distinct roles | Five roles, each with its own job, limits and checks | `packages/engine/src/constants.ts` (`ROLE_DEFAULTS`) |
-| Per-user budgets | Every call is billed to an end user of Teire's service key: each signed-in person (`gh:<id>`, $0.50/day), each GitHub App installation (`inst:<id>`, $3/day), Teire's shared catalog reader. Work reads the payer's allowance first and waits for its own reset; the operator moves or pauses end users (`PUT`/`PATCH /end-users`) | Settings › Allowances · https://teire.84.46.247.92.sslip.io/docs/otari/allowances |
-| Budgets and spending limits | A ceiling on Teire's key, read live (`GET /key/budget`) on the trust page and the operator view; `403 budget_exceeded` and `402` become typed refusals with a reset time | https://teire.84.46.247.92.sslip.io/trust |
-| Model routing and fallbacks | One Otari routing policy per role (`teire-fixer`, `teire-reviewer`, `teire-reader`, `teire-researcher`, `teire-assistant`): the best-measured host first, a cheaper model once the payer's allowance is 80% used, three backups on failure; `teire-fallback-check` shows a fallback on every call. The receipt keeps the policy, `Otari-Provider`, `Otari-Fallback`, `Otari-Attempt-Count`; one `Otari-Conversation-Id` per fix run and per Ask Teire thread keeps it on one host for the prompt cache | https://teire.84.46.247.92.sslip.io/docs/otari#one-routing-policy-per-role |
-| Web search and web fetch | The researcher's `otari_web_search` and `otari_web_fetch` before every fix that needs the fixer; discovery of a new provider's deprecation pages | https://teire.84.46.247.92.sslip.io/docs/otari/research |
-| MCP | The researcher names Context7 in `mcp_servers`; Ask Teire's docs mode hands Otari Teire's own MCP server (`/api/mcp`) and Context7, and Otari runs their tools in the model's loop (`mcp:teire/search_docs`, `mcp:context7/resolve-library-id` on the receipt) | https://teire.84.46.247.92.sslip.io/api/mcp |
+| Per-user budgets | Every call is billed to an end user of Teire's service key: each signed-in person (`gh:<id>`, $0.50/day), each GitHub App installation (`inst:<id>`, $3/day), Teire's shared catalog reader. Work reads the payer's allowance first and waits for its own reset; the operator moves or pauses end users (`PUT`/`PATCH /end-users`) | Settings › Allowances · https://teire-otari.vercel.app/docs/otari/allowances |
+| Budgets and spending limits | A ceiling on Teire's key, read live (`GET /key/budget`) on the trust page and the operator view; `403 budget_exceeded` and `402` become typed refusals with a reset time | https://teire-otari.vercel.app/trust |
+| Model routing and fallbacks | One Otari routing policy per role (`teire-fixer`, `teire-reviewer`, `teire-reader`, `teire-researcher`, `teire-assistant`): the best-measured host first, a cheaper model once the payer's allowance is 80% used, three backups on failure; `teire-fallback-check` shows a fallback on every call. The receipt keeps the policy, `Otari-Provider`, `Otari-Fallback`, `Otari-Attempt-Count`; one `Otari-Conversation-Id` per fix run and per Ask Teire thread keeps it on one host for the prompt cache | https://teire-otari.vercel.app/docs/otari#one-routing-policy-per-role |
+| Web search and web fetch | The researcher's `otari_web_search` and `otari_web_fetch` before every fix that needs the fixer; discovery of a new provider's deprecation pages | https://teire-otari.vercel.app/docs/otari/research |
+| MCP | The researcher names Context7 in `mcp_servers`; Ask Teire's docs mode hands Otari Teire's own MCP server (`/api/mcp`) and Context7, and Otari runs their tools in the model's loop (`mcp:teire/search_docs`, `mcp:context7/resolve-library-id` on the receipt) | https://teire-otari.vercel.app/api/mcp |
 | Code execution | For a Python upgrade, both versions are installed in Otari's code sandbox and the signatures the repository calls are printed in the PR | `packages/engine/src/fix/research.ts` (`pythonProof`) |
-| Guardrails | Release notes, vendor pages and the research brief name a `prompt-injection` guardrail in block mode; Otari runs it before any model reads them and refuses a flagged one. On the zod run Otari refused a planted changelog and Teire read zod's own release notes without it; PR #25's body says so | https://teire.84.46.247.92.sslip.io/runs/2f804cf8-de46-4de7-aca8-a0769d82b320?tile=change · https://github.com/Blockchain-Oracle/teire-demo-examples/blob/main/npm-zod/VENDOR-NOTES.md (planted) · https://github.com/Blockchain-Oracle/teire-demo-examples/pull/25 |
+| Guardrails | Release notes, vendor pages and the research brief name a `prompt-injection` guardrail in block mode; Otari runs it before any model reads them and refuses a flagged one. On the zod run Otari refused a planted changelog and Teire read zod's own release notes without it; PR #25's body says so | https://teire-otari.vercel.app/runs/2f804cf8-de46-4de7-aca8-a0769d82b320?tile=change · https://github.com/Blockchain-Oracle/teire-demo-examples/blob/main/npm-zod/VENDOR-NOTES.md (planted) · https://github.com/Blockchain-Oracle/teire-demo-examples/pull/25 |
 
 ## 5. PRs or issues opened on the Otari repository
 
@@ -55,9 +55,9 @@ owner (fill in the links once filed).
 
 ## Links
 
-- Live app: https://teire.84.46.247.92.sslip.io
-- Teire on Otari (docs): https://teire.84.46.247.92.sslip.io/docs/otari
+- Live app: https://teire-otari.vercel.app
+- Teire on Otari (docs): https://teire-otari.vercel.app/docs/otari
 - A real fix through Otari: https://github.com/Blockchain-Oracle/teire-demo-bristow/pull/8
-- Its run: https://teire.84.46.247.92.sslip.io/runs/c154b1d4-ed40-4860-912d-5c587916c2e2
-- Live status: https://teire.84.46.247.92.sslip.io/trust
+- Its run: https://teire-otari.vercel.app/runs/c154b1d4-ed40-4860-912d-5c587916c2e2
+- Live status: https://teire-otari.vercel.app/trust
 - Feedback log written while building: https://github.com/Blockchain-Oracle/teire/blob/otari/docs/otari-feedback.md
