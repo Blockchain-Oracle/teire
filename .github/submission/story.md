@@ -56,7 +56,9 @@ opened ready, model total $0.053, billed by Otari to that installation's own all
   Teire's docs mode.
 - **Guardrails.** Release notes, vendor pages and the research brief name a prompt-injection
   guardrail in block mode; Otari runs it before any model reads them. A demo repository plants an
-  instruction to the AI in a changelog: Otari refuses it, and Teire reads the real notes without it.
+  instruction to the AI in a changelog: on the zod run Otari refused it ("Changelog 4.0.0"), Teire
+  read zod's 55 other sources without it, and PR #25 upgraded zod with 4/4 tests passing
+  (https://teire.84.46.247.92.sslip.io/runs/d522ac54-682c-4571-9c7d-4222ebee5b0e).
 
 ## Proof
 
@@ -65,7 +67,9 @@ opened ready, model total $0.053, billed by Otari to that installation's own all
   [#7](https://github.com/Blockchain-Oracle/teire-demo-bristow/pull/7) (retired OpenAI and Anthropic
   models), nlsh [#2](https://github.com/Blockchain-Oracle/teire-demo-nlsh/pull/2) (17 advisories),
   serve-handler [#15](https://github.com/Blockchain-Oracle/teire-demo-serve-handler/pull/15), examples
-  [#5](https://github.com/Blockchain-Oracle/teire-demo-examples/pull/5).
+  [#5](https://github.com/Blockchain-Oracle/teire-demo-examples/pull/5) and
+  [#25](https://github.com/Blockchain-Oracle/teire-demo-examples/pull/25) (zod 3 → 4, with Otari's
+  guardrail refusing a planted changelog on the way).
 - The models were chosen by measuring six open-weight models on Teire's own fix and extraction jobs
   through Otari ([Evaluation](https://teire.84.46.247.92.sslip.io/docs/otari/evaluation)).
 - Live app: https://teire.84.46.247.92.sslip.io · docs: https://teire.84.46.247.92.sslip.io/docs/otari
