@@ -86,7 +86,12 @@ export interface FixEvent {
   /** The agent's plan as it last set it (U2, `update_plan`). */
   plan?: { text: string; status: "pending" | "in_progress" | "done" }[];
   /** What the run read (U2, the run page's Context): release notes, a provider's page, a docs answer. */
-  source?: { kind: "release-notes" | "provider" | "docs"; title: string; url: string | null; quote: string };
+  source?: {
+    kind: "release-notes" | "provider" | "docs" | "research";
+    title: string;
+    url: string | null;
+    quote: string;
+  };
 }
 
 /** How much of an edit or a source the run page keeps. */
@@ -683,7 +688,7 @@ async function runLead(input: FixInput): Promise<FixRun> {
                 step: "context",
                 detail: src.title || src.url,
                 source: {
-                  kind: "docs",
+                  kind: "research",
                   title: src.title || src.url,
                   url: src.url,
                   quote: clip(

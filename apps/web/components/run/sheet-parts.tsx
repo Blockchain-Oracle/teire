@@ -314,11 +314,13 @@ export function contextOf(sheet: RunSheetData): [string, ContextItem[]][] {
   const groups: Record<string, ContextItem[]> = {
     "Release notes": [],
     "Provider pages": [],
+    "Researcher read": [],
     "Docs answers": [],
   };
   const kinds: Record<string, string> = {
     "release-notes": "Release notes",
     provider: "Provider pages",
+    research: "Researcher read",
     docs: "Docs answers",
   };
   let recorded = false;
