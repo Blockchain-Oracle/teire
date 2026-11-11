@@ -87,7 +87,8 @@ export interface FixEvent {
   plan?: { text: string; status: "pending" | "in_progress" | "done" }[];
   /** What the run read (U2, the run page's Context): release notes, a provider's page, a docs answer. */
   source?: {
-    kind: "release-notes" | "provider" | "docs" | "research";
+    /** `refused`: a document Otari's prompt-injection guardrail refused, with what it found. */
+    kind: "release-notes" | "provider" | "docs" | "research" | "refused";
     title: string;
     url: string | null;
     quote: string;

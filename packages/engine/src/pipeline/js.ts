@@ -19,7 +19,13 @@ import { type JsProject, readJsInventory } from "../inventory/js";
 import { jsTargetPolicy, readJsUpgradePolicy } from "../inventory/js-policy";
 import type { RepoTree } from "../inventory/tree";
 import { type LocateResult, locateTs } from "../locate/ts";
-import { documentsForReading, extractNotes, migrationNotes, noteRecords } from "../notes/extract";
+import {
+  documentsForReading,
+  extractNotes,
+  migrationNotes,
+  noteRecords,
+  refusalEvents,
+} from "../notes/extract";
 import { declaredPackageNotes, gatherNpmNotes, githubRepoOf } from "../notes/sources";
 import { getNpmVersion, npmDistTag, supplyChainSignals } from "../registry/clients";
 import { deprecationChange } from "../registry/deprecation";
@@ -351,6 +357,7 @@ export async function fixJsDependency(input: FixDependencyInput): Promise<FixDep
       detail: `${extraction.items.length} quoted item(s) from ${sources.length} source(s), ${extraction.dropped.length} dropped${extraction.error ? `; ${extraction.error}` : ""}`,
       costUsd: extraction.receipt.costUsd,
     });
+  if (extraction) for (const e of refusalEvents(extraction)) input.onEvent?.(e);
 
   const detail = await getNpmVersion(a.instance.name, target, options);
   const installed = a.instance.version
@@ -419,7 +426,7 @@ export async function fixJsDependency(input: FixDependencyInput): Promise<FixDep
     notes: [...notes, ...(input.movedNotes ?? [])],
     behaviour,
     ...(extraction ? { notesReceipt: extraction.receipt } : {}),
-    ...(extraction?.refused?.length ? { notesRefused: extraction.refused.map((d) => d.url) } : {}),
+    ...(extraction?.refused?.length ? { notesRefused: extraction.refused.map((d) => d.source.url) } : {}),
   });
   return { run, pr, groupKey, behaviour, notesReceipt: extraction?.receipt ?? null };
 }

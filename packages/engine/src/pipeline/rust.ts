@@ -10,7 +10,13 @@ import { type RustProject, readRustInventory } from "../inventory/rust";
 import type { RepoTree } from "../inventory/tree";
 import { locateRust } from "../locate/rust";
 import { mergeScip, readScipIndex } from "../locate/rust-scip";
-import { documentsForReading, extractNotes, migrationNotes, noteRecords } from "../notes/extract";
+import {
+  documentsForReading,
+  extractNotes,
+  migrationNotes,
+  noteRecords,
+  refusalEvents,
+} from "../notes/extract";
 import { declaredPackageNotes, gatherCargoNotes } from "../notes/sources";
 import { cratesIndexLines } from "../registry/cargo";
 import type { RegistryOptions } from "../registry/clients";
@@ -342,6 +348,7 @@ export async function fixRustDependency(
       detail: `${extraction.items.length} quoted item(s) from ${sources.length} source(s), ${extraction.dropped.length} dropped${extraction.error ? `; ${extraction.error}` : ""}`,
       costUsd: extraction.receipt.costUsd,
     });
+  if (extraction) for (const e of refusalEvents(extraction)) input.onEvent?.(e);
 
   const removedFeatures = (a.diff?.changes ?? [])
     .filter((c) => c.kind === "removed" && c.path.startsWith("feature:"))
@@ -406,7 +413,7 @@ export async function fixRustDependency(
     notes: [...notes, ...(input.movedNotes ?? [])],
     behaviour,
     ...(extraction ? { notesReceipt: extraction.receipt } : {}),
-    ...(extraction?.refused?.length ? { notesRefused: extraction.refused.map((d) => d.url) } : {}),
+    ...(extraction?.refused?.length ? { notesRefused: extraction.refused.map((d) => d.source.url) } : {}),
   });
   return { run, pr, groupKey, behaviour, notesReceipt: extraction?.receipt ?? null };
 }

@@ -14,7 +14,13 @@ import { assess, locateTargets, priorityOf, summariseFindings } from "../impact"
 import { type GoProject, readGoInventory } from "../inventory/go";
 import type { RepoTree } from "../inventory/tree";
 import { locateGo } from "../locate/go";
-import { documentsForReading, extractNotes, migrationNotes, noteRecords } from "../notes/extract";
+import {
+  documentsForReading,
+  extractNotes,
+  migrationNotes,
+  noteRecords,
+  refusalEvents,
+} from "../notes/extract";
 import { declaredPackageNotes, gatherGoNotes } from "../notes/sources";
 import type { RegistryOptions } from "../registry/clients";
 import { deprecationChange, retractedChange } from "../registry/deprecation";
@@ -403,6 +409,7 @@ export async function fixGoDependency(
       detail: `${extraction.items.length} quoted item(s) from ${sources.length} source(s), ${extraction.dropped.length} dropped${extraction.error ? `; ${extraction.error}` : ""}`,
       costUsd: extraction.receipt.costUsd,
     });
+  if (extraction) for (const e of refusalEvents(extraction)) input.onEvent?.(e);
 
   const plan = withVerifyOverrides(
     detectGoChecks(input.tree, a.project, undefined, goAccess(input.tree, input.options)),
@@ -489,7 +496,7 @@ export async function fixGoDependency(
     notes: [...notes, ...(input.movedNotes ?? [])],
     behaviour,
     ...(extraction ? { notesReceipt: extraction.receipt } : {}),
-    ...(extraction?.refused?.length ? { notesRefused: extraction.refused.map((d) => d.url) } : {}),
+    ...(extraction?.refused?.length ? { notesRefused: extraction.refused.map((d) => d.source.url) } : {}),
   });
   return { run, pr, groupKey, behaviour, notesReceipt: extraction?.receipt ?? null };
 }

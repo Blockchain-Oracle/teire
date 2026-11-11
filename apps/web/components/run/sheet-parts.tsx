@@ -300,6 +300,9 @@ export function Terminal({ exec }: { exec: Exec }) {
   );
 }
 
+/** Documents Otari's prompt-injection guardrail refused: shown first, where the run's reading is. */
+const REFUSED = "Refused by Otari's guardrail";
+
 export interface ContextItem {
   title: string;
   url: string | null;
@@ -312,12 +315,14 @@ export interface ContextItem {
  */
 export function contextOf(sheet: RunSheetData): [string, ContextItem[]][] {
   const groups: Record<string, ContextItem[]> = {
+    [REFUSED]: [],
     "Release notes": [],
     "Provider pages": [],
     "Researcher read": [],
     "Docs answers": [],
   };
   const kinds: Record<string, string> = {
+    refused: REFUSED,
     "release-notes": "Release notes",
     provider: "Provider pages",
     research: "Researcher read",
@@ -335,6 +340,24 @@ export function contextOf(sheet: RunSheetData): [string, ContextItem[]][] {
       url: source.url ?? null,
       quote: source.quote ?? null,
     });
+  }
+  // A run recorded before refusals had their own events says so in its notes step's line; the
+  // document's address is the teire.yml changelog line before it, when that is the one refused.
+  if (!groups[REFUSED]?.length) {
+    let declared: string | null = null;
+    for (const e of sheet.events) {
+      const detail = (e.payload as { detail?: unknown } | null)?.detail;
+      if (typeof detail !== "string") continue;
+      declared = /release notes from this repository's teire\.yml: (\S+)/.exec(detail)?.[1] ?? declared;
+      const titles = /prompt-injection guardrail refused \d+ document\(s\): ([^;]+)/.exec(detail)?.[1];
+      if (titles)
+        for (const title of titles.split(", "))
+          groups[REFUSED]?.push({
+            title,
+            url: titles.includes(", ") ? null : declared,
+            quote: "flagged as a prompt injection",
+          });
+    }
   }
   if (!recorded)
     for (const e of sheet.events) {

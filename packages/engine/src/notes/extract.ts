@@ -5,6 +5,7 @@ import { normalizeForQuote } from "../catalog/markdown";
 import { sha256 } from "../catalog/source";
 import { NOTES } from "../constants";
 import { type ChangeV2, changeV2, type Ecosystem } from "../contract";
+import type { FixEvent } from "../fix/run";
 import {
   type Ai,
   GuardrailBlockedError,
@@ -155,7 +156,36 @@ export interface ExtractionResult {
   promptHash: string;
   error?: string;
   /** Documents Otari's prompt-injection guardrail refused: left out of the reading. */
-  refused?: NoteSource[];
+  refused?: RefusedNote[];
+}
+
+/** A document Otari's guardrail refused: its source, the title it was read under, and what it found. */
+export interface RefusedNote {
+  source: NoteSource;
+  title: string;
+  why: string;
+}
+
+/**
+ * The run's record of refused documents: one guardrail step, and each document in the run page's
+ * Context with Otari's reason, so the refusal is shown where the run's reading is, not only in a log.
+ */
+export function refusalEvents(extraction: Pick<ExtractionResult, "refused">): FixEvent[] {
+  const refused = extraction.refused ?? [];
+  if (!refused.length) return [];
+  return [
+    {
+      step: "guardrail",
+      detail: `Otari's prompt-injection guardrail refused ${refused.map((r) => r.title).join(", ")}; the release notes were read without ${refused.length > 1 ? "them" : "it"}`,
+    },
+    ...refused.map(
+      (r): FixEvent => ({
+        step: "context",
+        detail: r.title,
+        source: { kind: "refused", title: r.title, url: r.source.url, quote: r.why },
+      }),
+    ),
+  ];
 }
 
 type NoteContext = { name: string; from: string; to: string; removedApis: string[] };
@@ -178,6 +208,15 @@ export async function extractNotes(
     if (!(error instanceof GuardrailBlockedError) || !guard) throw error;
     const verdicts = await Promise.all(docs.map((d) => screen(ai, d.text, "notes-screen")));
     const refused = docs.filter((_, i) => verdicts[i]?.verdict === "refused");
+    const refusedNotes = docs.flatMap((d, i): RefusedNote[] => {
+      const v = verdicts[i];
+      if (v?.verdict !== "refused") return [];
+      const why = v.findings
+        .map((f) => f.explanation)
+        .filter(Boolean)
+        .join("; ");
+      return [{ source: d.source, title: d.title, why: why || "flagged as a prompt injection" }];
+    });
     const kept = docs.filter((_, i) => verdicts[i]?.verdict !== "refused");
     const said = `Otari's prompt-injection guardrail refused ${refused.length || "a"} document(s)${
       refused.length ? `: ${refused.map((d) => d.title).join(", ")}` : ""
@@ -188,13 +227,13 @@ export async function extractNotes(
         dropped: [],
         promptHash: "",
         error: said,
-        refused: refused.map((d) => d.source),
+        refused: refusedNotes,
         receipt: { step: "notes", model: ai.modelId("reader"), ...noReceipt(), ms: 0 },
       };
     const rest = await extractOnce(ai, kept, context, guard);
     return {
       ...rest,
-      refused: refused.map((d) => d.source),
+      refused: refusedNotes,
       error: [said, rest.error].filter(Boolean).join("; "),
     };
   }

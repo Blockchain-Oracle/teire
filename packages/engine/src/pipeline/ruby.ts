@@ -9,7 +9,13 @@ import { assess, locateTargets, summariseFindings } from "../impact";
 import { type RubyProject, readRubyInventory } from "../inventory/ruby";
 import type { RepoTree } from "../inventory/tree";
 import { locateRuby } from "../locate/ruby";
-import { documentsForReading, extractNotes, migrationNotes, noteRecords } from "../notes/extract";
+import {
+  documentsForReading,
+  extractNotes,
+  migrationNotes,
+  noteRecords,
+  refusalEvents,
+} from "../notes/extract";
 import { declaredPackageNotes, gatherRubyNotes } from "../notes/sources";
 import type { RegistryOptions } from "../registry/clients";
 import { deprecationChange, rubygemsYankChange } from "../registry/deprecation";
@@ -295,6 +301,7 @@ export async function fixRubyDependency(
       detail: `${extraction.items.length} quoted item(s) from ${sources.length} source(s), ${extraction.dropped.length} dropped${extraction.error ? `; ${extraction.error}` : ""}`,
       costUsd: extraction.receipt.costUsd,
     });
+  if (extraction) for (const e of refusalEvents(extraction)) input.onEvent?.(e);
 
   const plan = withVerifyOverrides(detectRubyChecks(input.tree, a.project), a.project.root, input.verify);
   // Bundler's cooldown set to the target's age excludes exactly the versions published after it:
@@ -364,7 +371,7 @@ export async function fixRubyDependency(
     notes: [...notes, ...(input.movedNotes ?? [])],
     behaviour,
     ...(extraction ? { notesReceipt: extraction.receipt } : {}),
-    ...(extraction?.refused?.length ? { notesRefused: extraction.refused.map((d) => d.url) } : {}),
+    ...(extraction?.refused?.length ? { notesRefused: extraction.refused.map((d) => d.source.url) } : {}),
   });
   return { run, pr, groupKey, behaviour, notesReceipt: extraction?.receipt ?? null };
 }

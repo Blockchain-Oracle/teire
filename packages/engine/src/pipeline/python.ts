@@ -11,7 +11,13 @@ import { assess, locateTargets, summariseFindings } from "../impact";
 import { type PyProject, readPythonInventory } from "../inventory/python";
 import type { RepoTree } from "../inventory/tree";
 import { locatePython } from "../locate/python";
-import { documentsForReading, extractNotes, migrationNotes, noteRecords } from "../notes/extract";
+import {
+  documentsForReading,
+  extractNotes,
+  migrationNotes,
+  noteRecords,
+  refusalEvents,
+} from "../notes/extract";
 import { declaredPackageNotes, gatherPypiNotes, githubRepoOf } from "../notes/sources";
 import type { RegistryOptions } from "../registry/clients";
 import { deprecationChange } from "../registry/deprecation";
@@ -295,6 +301,7 @@ export async function fixPyDependency(
       detail: `${extraction.items.length} quoted item(s) from ${sources.length} source(s), ${extraction.dropped.length} dropped${extraction.error ? `; ${extraction.error}` : ""}`,
       costUsd: extraction.receipt.costUsd,
     });
+  if (extraction) for (const e of refusalEvents(extraction)) input.onEvent?.(e);
 
   const targetWheel = await fetchPypiWheel(a.instance.name, target, options);
   // Hash-pinned requirements (`--hash=sha256:…`) need the target's hashes, the same set
@@ -381,7 +388,7 @@ export async function fixPyDependency(
     notes: [...notes, ...(input.movedNotes ?? [])],
     behaviour,
     ...(extraction ? { notesReceipt: extraction.receipt } : {}),
-    ...(extraction?.refused?.length ? { notesRefused: extraction.refused.map((d) => d.url) } : {}),
+    ...(extraction?.refused?.length ? { notesRefused: extraction.refused.map((d) => d.source.url) } : {}),
   });
   return { run, pr, groupKey, behaviour, notesReceipt: extraction?.receipt ?? null };
 }

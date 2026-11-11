@@ -62,6 +62,8 @@ export const TITLES: Record<string, [live: string, done: string]> = {
   resolver: ["dependabot-core's updater is changing the dependency files", "dependabot-core's updater"],
   transaction: ["Applying the dependency change", "Applied the dependency change"],
   codemod: ["Making the deterministic edits", "Deterministic edits"],
+  research: ["The researcher is reading the web through Otari", "The researcher read the web through Otari"],
+  guardrail: ["Otari's prompt-injection guardrail is checking", "Otari's prompt-injection guardrail"],
   install: ["Installing in the sandbox", "Installed in the sandbox"],
   baseline: ["Running your checks on the unchanged repository", "Baseline: your checks before the change"],
   agent: ["The agent is fixing the code", "The agent fixed the code"],
