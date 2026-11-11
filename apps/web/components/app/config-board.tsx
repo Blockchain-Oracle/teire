@@ -82,6 +82,19 @@ function originOf(origins: Record<string, string>, key: string) {
   return /org|teire-config/.test(o) ? "org" : /repo|teire\.ya?ml/.test(o) ? "repo" : "default";
 }
 
+/** One list entry as words: a declared source reads as its package or host and what it names. */
+function entryText(v: unknown): { text: string; title?: string } {
+  if (v && typeof v === "object") {
+    const s = v as { package?: string; host?: string; changelogUrl?: string; specUrl?: string };
+    const who = s.package ?? s.host;
+    const url = s.specUrl ?? s.changelogUrl;
+    if (who)
+      return { text: `${who} · ${s.specUrl ? "API spec" : "changelog"}`, ...(url ? { title: url } : {}) };
+    return { text: JSON.stringify(v) };
+  }
+  return { text: String(v) };
+}
+
 function Value({ value, suffix }: { value: unknown; suffix?: string | undefined }) {
   if (value === true) return <Check className="size-4 text-proven" strokeWidth={2.5} aria-label="on" />;
   if (value === false) return <Minus className="size-4 text-ink-3" strokeWidth={2.5} aria-label="off" />;
@@ -89,11 +102,14 @@ function Value({ value, suffix }: { value: unknown; suffix?: string | undefined 
     return value.length ? (
       // The entries themselves, two then "+N", so nothing important hides behind a hover.
       <span className="flex min-w-0 items-center gap-1 text-xs">
-        {value.slice(0, 2).map((v) => (
-          <span key={String(v)} className="truncate rounded bg-sunken px-1.5 py-px">
-            {String(v)}
-          </span>
-        ))}
+        {value.slice(0, 2).map((v) => {
+          const e = entryText(v);
+          return (
+            <span key={e.text} title={e.title} className="truncate rounded bg-sunken px-1.5 py-px">
+              {e.text}
+            </span>
+          );
+        })}
         {value.length > 2 ? <span className="shrink-0 text-ink-3">+{value.length - 2}</span> : null}
       </span>
     ) : (
