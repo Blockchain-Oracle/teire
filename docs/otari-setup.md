@@ -27,6 +27,13 @@ Region: US (`https://api.otari.ai/api/v1`). All amounts are USD.
 | `teire-service-daily`      | 10.00  | Daily  | everything together (used by the ceiling in step 4)     |
 
 The amounts are first values; S02 measures cost per fix run and per reply and they are adjusted here.
+Each period is a calendar reset (`reset_alignment`), not a rolling window: a daily budget starts again at
+00:00 UTC.
+
+As configured on 2026-11-11 (read back with `GET /api/v1/end-user-budgets`): all six end-user budgets
+match the table except `teire-walk-tiny`, which is 0.20 (set it to 0.02 so the walk's person is refused at
+once), and `teire-operator-daily`, which resets weekly (calendar week). `teire-service-daily` and the
+ceiling in step 4 are not set yet (`GET /api/v1/key/budget` lists no limits).
 
 ## 3. Keys (API keys → Create key)
 
@@ -44,8 +51,11 @@ then on.
 **CLI key** (an ordinary key, not a service key)
 - Name: `teire-cli`
 
-The first key made (2026-11-10) is an ordinary key, saved as `OTARI_API_KEY`. The service key
-(2026-11-10) is saved as `OTARI_SERVICE_KEY` and is the one the app uses. Teire names an end user only
+The first key made (2026-11-10) is an ordinary key, saved as `OTARI_API_KEY`. The service key the app
+uses is saved as `OTARI_SERVICE_KEY`: the one made on 2026-11-11 with all six end-user budgets on it
+(the 2026-11-10 service key had none and is kept as `OTARI_SERVICE_KEY_PREV`). Checked on 2026-11-11:
+a call through the deployed app's health route created `teire:operator` on `teire-operator-daily`, and
+a reader call created `teire:catalog` on `teire-catalog-daily`. Teire names an end user only
 when the service key holds that end user's budget (Otari puts a new end user on a budget once, at its
 first call), so calls are billed to the key until the budgets are on it, and the gateway re-reads the
 key's budget list every five minutes: budgets added to the key apply without a redeploy.
@@ -62,8 +72,8 @@ Give both keys to Claude through the secrets file, never in chat:
 
 ## 5. Tools (Workspace → Tools)
 
-Checked on 2026-11-10 with `GET /api/v1/tools`: code execution is available; **web search and web
-fetch answer `workspace_disabled`**. Turn both on:
+Checked on 2026-11-10 and again on 2026-11-11 with `GET /api/v1/tools`: code execution is available;
+**web search and web fetch answer `workspace_disabled`**. Turn both on:
 - Web search: Allowed.
 - Web fetch: Allowed.
 - Code execution: Follow the deployment default (or Allowed).
