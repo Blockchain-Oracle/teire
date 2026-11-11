@@ -1,97 +1,63 @@
-# Devpost submission: Teire
+# Submission: Teire on Otari
 
-Prepared against the owner's live Nebius x NVIDIA Global AI Hackathon form on 2026-10-30. The form allows 200 characters for the elevator pitch, up to 25 Built with tags, 15 gallery images (JPG/PNG/GIF, 5 MB each), and a YouTube or Vimeo demo URL. The long story is in [story.md](story.md); the organizer answers are in [additional-info.md](additional-info.md). The project details page saved the story, tags, links, all 13 captioned gallery images in the order below, and the Teire banner as thumbnail. The demo video is https://youtu.be/s3VyWZnEVqc (also https://teire.vercel.app/demo). The draft has not been submitted.
+For the **Mozilla Otari Hackathon – Devs Wilding Online** (track **Build on Otari!**). The organisers
+ask for the same seven items by email (a reply to the sign-up thread with marcus+wilding@mozilla.org)
+and on DoraHacks ("Submit Build"). Every item below is ready to paste, in the organisers' order. The
+long story is [story.md](story.md), the written feedback [feedback.md](feedback.md), the issue drafts
+for the Otari repository [otari-issues.md](otari-issues.md), and the demo script
+[video-script.md](video-script.md).
 
-## Project name
+## 1. Project name, Otari sign-up email, one line
 
-Teire · 手入れ
+- **Project name:** Teire · 手入れ
+- **Email you signed up to Otari.ai with:** `<your Otari sign-up email>` (not written into this public file)
+- **One line (145 characters):** Teire finds the code a package, API or AI-model change breaks, fixes it with open-weight models on Otari, and proves the fix with your own tests.
 
-## Elevator pitch (174 characters, saved in Devpost)
+## 2. Public GitHub repository and hackathon branch
 
-When a package, API or AI model changes, Teire finds and fixes the code it breaks. Nemotron on Nebius Token Factory writes the fix; your own tests prove it in a pull request.
+- https://github.com/Blockchain-Oracle/teire
+- Branch: **`otari`** (https://github.com/Blockchain-Oracle/teire/tree/otari)
 
-## Track
+## 3. The first commit where Otari came in
 
-Coding and Agentic Engineering Track
+https://github.com/Blockchain-Oracle/teire/commit/344189b0eedebdc26d223c42e9db15af616d8596
+("Otari comes in: every model call, search and fetch goes through Otari")
 
-## Built with
+## 4. Otari features used
 
-Nebius, nebius-token-factory, token-factory-sandboxes, nvidia-nemotron, nemotron-3-ultra, nemotron-3-super, nemotron-3.5-super, tavily, typescript, next.js, react, postgresql, pg-boss, drizzle, github-apps, dependabot-core, gvisor, ast-grep, cloudflare-containers, vercel, coolify, node.js, mcp
+Every one is used by the running application, not only enabled in the dashboard:
 
-## Try it out
-
-- https://teire.vercel.app
-- https://teire.vercel.app/scan (public scan and dry run, sign in with GitHub)
-- https://teire.vercel.app/docs
-- https://github.com/teire-dev/teire
-- https://www.npmjs.com/package/teire-cli (`npx teire-cli scan`)
-
-## Video
-
-https://youtu.be/s3VyWZnEVqc (2:50, public). Short link: https://teire.vercel.app/demo. Paste the YouTube URL into the Devpost video field.
-
-The current [official rules](https://nebiusglobalaihackathon.devpost.com/rules) give a 2026-10-30 10:00 PDT submission deadline (18:00 WAT) and a judging period ending 2026-12-23. Keep the working demo free and unrestricted through that date. The older local hackathon context still says 2026-12-15 and needs updating before relying on it for access planning.
-
-## Image gallery (in this order)
-
-Files are in `.github/assets/` and `.github/assets/captures/`.
-
-| # | File | Caption |
+| Rubric feature | How Teire uses it | Proof |
 |---|---|---|
-| 1 | `banner-dark.png` | When upstream breaks, Teire fixes your code. A real zod upgrade in teire-dev/examples, proven by 4 of 4 tests. |
-| 2 | `captures/report-wrapped-models-desktop.png` | Public scan: Groq retired two Llama models; Nemotron traced the IDs through a tier registry to the request. |
-| 3 | `captures/dryrun-go-timeline-desktop.png` | Live run: Teire upgrades golang-jwt v4 to v5; checks fail, then Nemotron 3 Ultra edits until they pass. |
-| 4 | `captures/dryrun-go-pr-desktop.png` | The pull request Teire composed: upstream change, code changes, verification, and model receipt. |
-| 5 | `captures/dryrun-go-verification-desktop.png` | Build, typecheck and 4 of 4 tests pass before and after the Go fix on Token Factory Sandboxes. |
-| 6 | `captures/dryrun-go-receipt-desktop.png` | Every Nemotron call on Token Factory, with tokens and $0.1242 model cost for this run. |
-| 7 | `model-retirement-dark.png` | The model retirement journey, numbered, with the real values from the Groq run. |
-| 8 | `fix-loop-dark.png` | The fix loop: deterministic change and checks first, then Nemotron tools and repeated checks, final review, and an evidence-gated PR. |
-| 9 | `system-light.png` | The system: GitHub, web app, Postgres outbox, worker, Nemotron on Token Factory, dependency sources, and verification backends. |
-| 10 | `captures/dashboard-desktop.png` | The dashboard maps upstream changes to repositories and open work; drag a change onto a repository to start a fix. |
-| 11 | `captures/repo-prs-desktop.png` | Each pull request shows its breadcrumb trail: package, updater, Token Factory, checks before and after, review, and PR. |
-| 12 | `captures/changes-desktop.png` | The public catalog shows every source Teire watches, its last check, new notices, and 30 days of pickups. |
-| 13 | `captures/trust-desktop.png` | Live production status: worker heartbeat, Token Factory credits, and the Nemotron model answering. |
+| Open-weight models (×5, different purposes) | GLM 5.3 fixes code, DeepSeek V4 Pro reviews, DeepSeek V4.1 Flash reads release notes and provider pages, MiniMax M3 researches, gpt-oss-120b answers Ask Teire | Receipt of https://github.com/Blockchain-Oracle/teire-demo-bristow/pull/8 · https://teire.84.46.247.92.sslip.io/docs/otari/evaluation |
+| Multiple models serving distinct roles | Five roles, each with its own job, limits and checks | `packages/engine/src/constants.ts` (`ROLE_DEFAULTS`) |
+| Per-user budgets | Every call is billed to an end user of Teire's service key: each signed-in person (`gh:<id>`, $0.50/day), each GitHub App installation (`inst:<id>`, $3/day), Teire's shared catalog reader. Work reads the payer's allowance first and waits for its own reset; the operator moves or pauses end users (`PUT`/`PATCH /end-users`) | Settings › Allowances · https://teire.84.46.247.92.sslip.io/docs/otari/allowances |
+| Budgets and spending limits | A ceiling on Teire's key, read live (`GET /key/budget`) on the trust page and the operator view; `403 budget_exceeded` and `402` become typed refusals with a reset time | https://teire.84.46.247.92.sslip.io/trust |
+| Model routing and fallbacks | Each role sends a catalog id, so Otari chooses the host and falls back across up to five; the receipt keeps `Otari-Provider`, `Otari-Fallback`, `Otari-Attempt-Count`; one `Otari-Conversation-Id` per fix run and per Ask Teire thread keeps it on one host for the prompt cache | https://teire.84.46.247.92.sslip.io/docs/otari/receipts |
+| Web search and web fetch | The researcher's `otari_web_search` and `otari_web_fetch` before every fix that needs the fixer; discovery of a new provider's deprecation pages | https://teire.84.46.247.92.sslip.io/docs/otari/research |
+| MCP | The researcher names Context7 in `mcp_servers`; Ask Teire's docs mode hands Otari Teire's own MCP server (`/api/mcp`) and Context7 | https://teire.84.46.247.92.sslip.io/api/mcp |
+| Code execution | For a Python upgrade, both versions are installed in Otari's code sandbox and the signatures the repository calls are printed in the PR | `packages/engine/src/fix/research.ts` (`pythonProof`) |
+| Guardrails | Release notes, vendor pages and the research brief name a `prompt-injection` guardrail in block mode; Otari runs it before any model reads them and refuses a flagged one | https://github.com/Blockchain-Oracle/teire-demo-examples/blob/main/npm-zod/VENDOR-NOTES.md (planted) · https://teire.84.46.247.92.sslip.io/docs/otari/research#the-prompt-injection-guardrail |
 
-## Feedback on Nebius Token Factory and NVIDIA models
+## 5. PRs or issues opened on the Otari repository
 
-**The owner should read this and adjust it to their own experience before submitting.**
+Drafted in [otari-issues.md](otari-issues.md) from the friction met while building; filed by the
+owner (fill in the links once filed).
 
-**What we used them for.**
-- Every model call in Teire goes to Token Factory.
-- Nemotron 3 Ultra (`nvidia/Nemotron-3-Ultra-550b-a55b`) is the coding agent and the reader: release notes, provider deprecation pages, tracing wrapped model IDs, and reviewing fixes.
-- Nemotron 3.5 Super (`nvidia/Nemotron-3.5-Super-VL`) is the failover; it replaced Nemotron 3 Super, which Token Factory retires on 2026-11-09.
-- Token Factory Sandboxes verifies public repositories' upgrades and dry runs (Cloudflare Containers when Token Factory isn't available to the worker). Teire builds its six sandbox images inside Token Factory from its own Dockerfiles, then runs the install and each check as microVMs.
+## 6. Demo video (3–5 minutes)
 
-**What worked well.**
-- Token Factory's OpenAI-compatible endpoint worked with the AI SDK's OpenAI-compatible provider on the first try. Structured outputs (`json_schema`) worked with Nemotron 3 Ultra.
-- One endpoint for all three roles means moving a role between Ultra and Super is a config change.
-- The public `models_info` endpoint gives per-token prices, so every pull request carries an exact receipt.
-- Token Factory Sandboxes' model fit verification well: a kept microVM's result is the next image, so the install's image is where the checks start and each check starts from the image the one before it left, and `networking.enabled: false` gives the checks no network interface at all. Importing public images worked on the first call, and `whoami` states the limits, which Teire reads and keeps to, instead of leaving us to guess them.
-- Nemotron 3 Ultra as a coding agent was the standout. In our evaluation it verified every fix across npm, PyPI, Go, Rust, Ruby, Java and Kotlin, with fewer attempts than Super on the Kotlin and wrapped-model cases. Super was 3 to 7 times cheaper and a solid failover, but once it passed the tests by bypassing the model call.
+`<YouTube link>`: a screen recording with the owner's own voice, following [video-script.md](video-script.md).
 
-**What needs work.**
-- **No balance API or spend cap.** On 2026-10-25 every call started returning `402 credit_balance_exhausted` with no warning, so we built our own daily budget and a credits pause.
-- **Reasoning controls aren't documented for Nemotron.** We found `enable_thinking` and `force_nonempty_content` in NVIDIA's model card, not in the Token Factory docs.
-- **Two docs inconsistencies:**
-  - The spec's `response_format` description says only `json_object` or `text` are supported, but `json_schema` works.
-  - Model ID casing differs between Ultra (`Nemotron-3-Ultra…`) and Super (`nemotron-3-super…`).
-- **No retirement fields in `models_info`.** Retirements are only in prose notices linked from `llms.txt`. A `shutdown_date` field would let tools like Teire warn every user before a model goes away.
-- **Onboarding friction.**
-  - Billing setup needs a card from a supported country, and Nigeria is not supported.
-  - The hackathon promo code arrived in Gmail's Promotions tab, where it was easy to miss.
-- **Token Factory Sandboxes gaps that shaped our design.**
-  - Token Factory keeps a run's saved images for 180 days, after which untagged ones may be deleted, and has no call to delete them sooner, so a private repository's code doesn't go there: private repositories verify on Cloudflare Containers.
-  - No idempotency key on spawns, so a spawn whose response is lost can't be retried safely; Teire never retries one.
-  - No egress log and no allowlist for an instance's network, so the install's network is either fully open or off.
-  - CPU and memory per instance aren't documented or settable; `whoami` gives the timeout, concurrency and layer size only. We measured them from inside: 4 CPUs, 3.9 GB of memory and a 2 GB `/dev/shm`.
-  - The microVM's root filesystem (virtiofs) loses a file that a process writes while a child it started holds the same file open: every Ruby native extension failed with `Errno::EBADF` on `mkmf.log` (reproduced with `gem install bigdecimal -v 3.1.9`). The same build passes on the VM's tmpfs, so Teire builds gems there and copies them into place.
+## 7. Feedback
 
-**Would we build with them again?** Yes. Nemotron 3 Ultra did real multi-step repository work, and Token Factory made it a drop-in API.
+- Written: [feedback.md](feedback.md) answers the three written questions.
+- Screen recording (3–5 minutes): `<link>`, answering the four spoken questions; talking points in [feedback.md](feedback.md#for-the-feedback-recording).
 
-## Prior work
+## Links
 
-Teire was started on 2026-10-24, inside the submission period: the repository's first commit is that day. Nothing existed before.
-
-## Builders & Brews city
-
-Leave empty unless the owner attended one.
+- Live app: https://teire.84.46.247.92.sslip.io
+- Teire on Otari (docs): https://teire.84.46.247.92.sslip.io/docs/otari
+- A real fix through Otari: https://github.com/Blockchain-Oracle/teire-demo-bristow/pull/8
+- Its run: https://teire.84.46.247.92.sslip.io/runs/c154b1d4-ed40-4860-912d-5c587916c2e2
+- Live status: https://teire.84.46.247.92.sslip.io/trust
+- Feedback log written while building: https://github.com/Blockchain-Oracle/teire/blob/otari/docs/otari-feedback.md
