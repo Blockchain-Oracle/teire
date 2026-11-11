@@ -204,6 +204,13 @@
       "when": 1793760000000,
       "tag": "0028_otari_receipts",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1793846400000,
+      "tag": "0029_web_reads_repo_providers",
+      "breakpoints": true
     }
   ]
 }
