@@ -109,6 +109,9 @@ export const RESEARCH = {
   toolIterations: 5,
   maxOutputTokens: 4_000,
   timeoutMs: 150_000,
+  /** A 429 is asked once more after Otari's Retry-After, or this when it sends none; never longer than the cap. */
+  rateLimitWaitMs: 8_000,
+  rateLimitMaxWaitMs: 30_000,
   maxChanges: 8,
   maxSources: 8,
   maxApis: 8,

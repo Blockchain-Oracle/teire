@@ -36,7 +36,7 @@ import { type Change, runChecks, runSide, type SideRun, type VerifyRun, verifyCh
 import { type AgentStep, filesNamed, runAgent } from "./agent";
 import { applyCodemods, type CodemodEdit, type MigrationNote, planCodemods } from "./codemods";
 import { upgradeRequester } from "./request-upgrade";
-import { briefText, type ResearchBrief, research } from "./research";
+import { briefText, otariSaid, type ResearchBrief, research } from "./research";
 import { type InstallTriage, type Review, reviewBump, reviewFix, triageInstall } from "./review";
 import { prepareTransaction, type RequestUpgrade, type Transaction, utf8 } from "./transaction";
 import type { ManifestEdit } from "./upgrade-js";
@@ -716,7 +716,7 @@ async function runLead(input: FixInput): Promise<FixRun> {
             return screened.verdict === "refused" ? "" : text;
           })
           .catch((error: unknown) => {
-            emit({ step: "research", detail: `research skipped: ${String(error).slice(0, 200)}` });
+            emit({ step: "research", detail: `research skipped: ${otariSaid(error).slice(0, 280)}` });
             return "";
           })
       : Promise.resolve("");

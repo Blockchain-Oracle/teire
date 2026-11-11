@@ -1,4 +1,5 @@
-import { generateText, Output } from "ai";
+import { setTimeout as sleep } from "node:timers/promises";
+import { APICallError, generateText, Output } from "ai";
 import { z } from "zod";
 import { RESEARCH } from "../constants";
 import { type Ai, type McpServer, type OtariTool, type OtariToolCall, receiptOf } from "../gateway";
@@ -110,6 +111,38 @@ async function ask(input: ResearchInput, withMcp: boolean) {
   });
 }
 
+/**
+ * How long to wait before asking once more, for a 429 only. Otari refuses it before its loop runs a
+ * search, so the second ask costs nothing extra; a wait longer than the cap, or any other failure (a
+ * timeout mid-loop would pay twice), is not retried.
+ */
+export function rateLimitWait(error: unknown): number | null {
+  if (!APICallError.isInstance(error) || error.statusCode !== 429) return null;
+  const after = Number(error.responseHeaders?.["retry-after"]);
+  const ms = Number.isFinite(after) && after > 0 ? after * 1000 : RESEARCH.rateLimitWaitMs;
+  return ms <= RESEARCH.rateLimitMaxWaitMs ? ms : null;
+}
+
+/** What Otari said about a failed call: the AI SDK's message is only the status text. */
+export function otariSaid(error: unknown): string {
+  const body = (error as { responseBody?: unknown }).responseBody;
+  return [String(error), typeof body === "string" ? body : body == null ? "" : JSON.stringify(body)]
+    .filter(Boolean)
+    .join(" ");
+}
+
+/** One ask, and once more after Otari's Retry-After when it was rate limited. */
+async function askOnce(input: ResearchInput, withMcp: boolean) {
+  try {
+    return await ask(input, withMcp);
+  } catch (error) {
+    const wait = rateLimitWait(error);
+    if (wait === null) throw error;
+    await sleep(wait, undefined, input.signal ? { signal: input.signal } : undefined);
+    return ask(input, withMcp);
+  }
+}
+
 /** Every page Otari's tools returned in the loop (a brief may cite these), and the ones it fetched. */
 function sourcesOf(calls: OtariToolCall[]): { returned: ResearchSource[]; fetched: Set<string> } {
   const seen = new Map<string, string>();
@@ -130,14 +163,12 @@ export async function research(input: ResearchInput): Promise<ResearchBrief | nu
   let withMcp = mcpByUrl;
   let result: Awaited<ReturnType<typeof ask>>;
   try {
-    result = await ask(input, withMcp);
+    result = await askOnce(input, withMcp);
   } catch (error) {
-    // Otari's reason is in the body; the AI SDK's message is only the status text.
-    const said = `${String(error)} ${(error as { responseBody?: unknown }).responseBody ?? ""}`;
-    if (!withMcp || !/MCP servers by URL/i.test(said)) throw error;
+    if (!withMcp || !/MCP servers by URL/i.test(otariSaid(error))) throw error;
     mcpByUrl = false;
     withMcp = false;
-    result = await ask(input, false);
+    result = await askOnce(input, false);
   }
   const receipt = receiptOf(result);
   const { returned: read, fetched } = sourcesOf(receipt.toolCalls);
