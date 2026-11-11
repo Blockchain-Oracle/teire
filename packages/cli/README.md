@@ -122,12 +122,11 @@ If a toolchain is missing, the scan says which one and how to get it. It never g
 
 ## Environment
 
-| Variable               | Effect                                                                                                  |
-| ---------------------- | ------------------------------------------------------------------------------------------------------- |
-| `GITHUB_TOKEN`         | Higher GitHub rate limits (release notes, advisories, spec history)                                     |
-| `TOKENFACTORY_API_KEY` | Nemotron traces model IDs passed through wrappers and registries, and reads discovered providers' pages |
-| `TAVILY_API_KEY`       | Searches for the notices of an API host neither the catalog nor the hand-written readers cover          |
-| `TEIRE_URL`            | Another Teire deployment (default `https://teire.84.46.247.92.sslip.io`)                                           |
+| Variable        | Effect                                                                                                        |
+| --------------- | ------------------------------------------------------------------------------------------------------------- |
+| `GITHUB_TOKEN`  | Higher GitHub rate limits (release notes, advisories, spec history)                                           |
+| `OTARI_API_KEY` | An otari.ai key: traces model IDs kept in wrappers and registries, and finds and reads discovered providers' pages through Otari's web search and fetch |
+| `TEIRE_URL`     | Another Teire deployment (default `https://teire.84.46.247.92.sslip.io`)                                      |
 
 `.github/teire.yml` (or `teire.yml`) is honoured as the service honours it: `ignore`, `ecosystems`, `paths`, `ignorePaths`, `upgrades.cooldownDays` and declared `sources`.
 
