@@ -10,12 +10,12 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ORIGIN = (process.env.TEIRE_PUBLIC_URL ?? "https://teire.84.46.247.92.sslip.io").replace(/\/+$/, "");
-const HERO = "d1b0c4d8-a46e-4e9d-b057-30b6d12be23b";
-/** The other real PRs that hang off the PR station (model retirement, a Nemotron major, advisories). */
+const HERO = "c154b1d4-ed40-4860-912d-5c587916c2e2";
+/** The other real PRs that hang off the PR station, all opened through Otari (a model retirement, advisories). */
 const MORE = [
-  { repo: "teire-dev/nlsh", number: 6 },
-  { repo: "teire-dev/examples", number: 16 },
-  { repo: "teire-dev/serve-handler", number: 16 },
+  { repo: "Blockchain-Oracle/teire-demo-bristow", number: 7 },
+  { repo: "Blockchain-Oracle/teire-demo-nlsh", number: 2 },
+  { repo: "Blockchain-Oracle/teire-demo-serve-handler", number: 15 },
 ];
 
 interface Sheet {
@@ -99,8 +99,8 @@ const updaterSeconds =
     ? Math.round((Date.parse(afterResolver) - Date.parse(resolverStart)) / 1000)
     : null;
 
-// Every Nemotron call of the run (reading the notes, fixing, reviewing), as the receipt counts them.
-const nemotron = sheet.calls.filter((c) => /nemotron/i.test(c.model));
+// Every model call of the run through Otari (reading the notes, researching, fixing, reviewing), as the receipt counts them.
+const modelCalls = sheet.calls;
 const fixCalls = sheet.calls.filter((c) => c.purpose === "fix");
 const cost = sheet.calls.reduce((s, c) => s + Number(c.costUsd || 0), 0);
 
@@ -109,7 +109,7 @@ const diff = sheet.run.diff ?? "";
 // Teire's diffs are unified diffs with "--- a/<file>" headers (no "diff --git" lines).
 const files = [...diff.matchAll(/^--- a\/(\S+)/gm)].map((m) => m[1] as string);
 const isManifest = (f: string) => /(^|\/)(package(-lock)?\.json|[^/]*\.lock|[^/]*lock\.(json|yaml))$/.test(f);
-// Lines changed in the code Nemotron adapted (the manifest and the lockfile are the updater's).
+// Lines changed in the code the fixer adapted (the manifest and the lockfile are the updater's).
 let srcAdded = 0;
 let srcRemoved = 0;
 for (const section of diff.split(/^=+$/m)) {
@@ -188,14 +188,14 @@ const snapshot = {
   reach: sheet.reach,
   updaterSeconds,
   fix: {
-    calls: nemotron.length,
+    calls: modelCalls.length,
     fixCalls: fixCalls.length,
     model: fixCalls[0]?.model ?? null,
     costUsd: Number(cost.toFixed(3)),
   },
   diff: {
     files: files.length,
-    // The code Nemotron adapted, apart from the manifest and the lockfile the updater changed.
+    // The code the fixer adapted, apart from the manifest and the lockfile the updater changed.
     sourceFiles: files.filter((f) => !isManifest(f)).length,
     added,
     removed,

@@ -1,101 +1,94 @@
 {
-  "takenAt": "2026-10-30T14:17:09.223Z",
+  "takenAt": "2026-11-11T07:37:17.980Z",
   "run": {
-    "id": "d1b0c4d8-a46e-4e9d-b057-30b6d12be23b",
-    "href": "/runs/d1b0c4d8-a46e-4e9d-b057-30b6d12be23b",
-    "groupKey": "npm/zod/4.6.6",
-    "package": "zod",
-    "ecosystem": "npm",
-    "from": "3.25.76",
-    "to": "4.6.6",
-    "backend": "tokenfactory",
-    "finishedAt": "2026-10-28T19:38:20.751Z"
+    "id": "c154b1d4-ed40-4860-912d-5c587916c2e2",
+    "href": "/runs/c154b1d4-ed40-4860-912d-5c587916c2e2",
+    "groupKey": "models/openai",
+    "package": "openai",
+    "ecosystem": "models",
+    "from": "gpt-3.5-turbo, gpt-4, gpt-3.5-turbo-0613",
+    "to": "gpt-5.6-terra, gpt-5.6-sol, gpt-3.5-turbo",
+    "backend": "cloudflare",
+    "finishedAt": "2026-11-10T20:04:36.107Z"
   },
-  "repo": "teire-dev/examples",
-  "advisory": {
-    "id": "GHSA-mrhx-c7xc-m3w5",
-    "severity": "high"
-  },
+  "repo": "Blockchain-Oracle/teire-demo-bristow",
+  "advisory": null,
   "reach": {
-    "sites": 0,
-    "advisory": true
+    "sites": 29,
+    "advisory": false
   },
-  "updaterSeconds": 100,
+  "updaterSeconds": null,
   "fix": {
-    "calls": 22,
-    "fixCalls": 20,
-    "model": "nvidia/Nemotron-3-Ultra-550b-a55b",
-    "costUsd": 0.163
+    "calls": 7,
+    "fixCalls": 6,
+    "model": "z-ai/glm-5.3",
+    "costUsd": 0.053
   },
   "diff": {
-    "files": 4,
-    "sourceFiles": 2,
-    "added": 8,
-    "removed": 8,
-    "srcAdded": 3,
-    "srcRemoved": 3,
+    "files": 3,
+    "sourceFiles": 3,
+    "added": 32,
+    "removed": 32,
+    "srcAdded": 32,
+    "srcRemoved": 32,
     "peek": {
-      "file": "npm-zod/src/schema.ts",
+      "file": "spec/bristow/agent_spec.rb",
       "lines": [
         {
           "kind": "ctx",
-          "text": "    email: z.string().email(),"
+          "text": "      agent_name \"TestAgent\""
         },
         {
           "kind": "ctx",
-          "text": "    channel: z.nativeEnum(Channel),"
+          "text": "      description \"A test agent\""
         },
         {
           "kind": "ctx",
-          "text": "    subject: z.string().min(1),"
+          "text": "      system_message \"You are a test agent that helps with testing. When asked to test something, always use the test_function.\""
         },
         {
           "kind": "del",
-          "text": "    labels: z.record(z.string()).default({}),"
+          "text": "      model \"gpt-3.5-turbo\""
         },
         {
           "kind": "add",
-          "text": "    labels: z.record(z.string(), z.unknown()).default({}),"
+          "text": "      model \"gpt-5.6-terra\""
         },
         {
           "kind": "ctx",
-          "text": "  })"
+          "text": "      functions [test_function]"
         },
         {
           "kind": "ctx",
-          "text": "  .strict();"
+          "text": "    end"
         },
         {
           "kind": "ctx",
-          "text": ""
+          "text": "  end"
         }
       ]
     }
   },
   "broke": {
-    "typecheck": {
-      "exit": 2,
-      "said": "4 TS errors"
-    },
     "test": {
       "exit": 1,
-      "said": "1/4 passed"
+      "said": "142/143 passed"
     }
   },
   "checks": {
     "tests": {
-      "before": "4/4",
-      "after": "4/4"
+      "before": "143/143",
+      "after": "143/143"
     },
     "typecheck": {
-      "before": true,
-      "after": true
+      "before": false,
+      "after": false
     }
   },
   "pr": {
-    "number": 30,
-    "url": "https://github.com/teire-dev/examples/pull/30",
-    "title": "Upgrade zod from 3.25.76 to 4.6.6 to fix GHSA-mrhx-c7xc-m3w5",
+    "number": 8,
+    "url": "https://github.com/Blockchain-Oracle/teire-demo-bristow/pull/8",
+    "title": "Replace 3 retired OpenAI models",
     "state": "open",
     "draft": false,
     "mode": "ready",
@@ -103,123 +96,123 @@
   },
   "steps": [
     {
-      "step": "queue",
-      "at": "2026-10-28T16:38:21.345Z"
-    },
-    {
       "step": "assess",
-      "at": "2026-10-28T19:34:26.524Z"
+      "at": "2026-11-10T20:02:31.831Z"
     },
     {
-      "step": "resolver",
-      "at": "2026-10-28T19:34:30.259Z"
+      "step": "context",
+      "at": "2026-11-10T20:02:36.974Z"
     },
     {
       "step": "transaction",
-      "at": "2026-10-28T19:35:20.383Z"
+      "at": "2026-11-10T20:02:37.016Z"
+    },
+    {
+      "step": "context",
+      "at": "2026-11-10T20:02:37.017Z"
     },
     {
       "step": "baseline",
-      "at": "2026-10-28T19:36:10.178Z"
+      "at": "2026-11-10T20:03:27.926Z"
     },
     {
       "step": "install",
-      "at": "2026-10-28T19:36:10.240Z"
+      "at": "2026-11-10T20:03:44.037Z"
     },
     {
-      "step": "baseline",
-      "at": "2026-10-28T19:36:15.781Z"
-    },
-    {
-      "step": "transaction",
-      "at": "2026-10-28T19:36:18.045Z"
+      "step": "codemod",
+      "at": "2026-11-10T20:03:44.792Z"
     },
     {
       "step": "check",
-      "at": "2026-10-28T19:36:21.742Z"
+      "at": "2026-11-10T20:03:47.768Z"
     },
     {
       "step": "verify",
-      "at": "2026-10-28T19:36:23.746Z"
+      "at": "2026-11-10T20:03:47.798Z"
     },
     {
       "step": "agent",
-      "at": "2026-10-28T19:36:24.898Z"
+      "at": "2026-11-10T20:03:52.084Z"
     },
     {
       "step": "check",
-      "at": "2026-10-28T19:37:19.945Z"
+      "at": "2026-11-10T20:04:18.920Z"
     },
     {
       "step": "verify",
-      "at": "2026-10-28T19:37:34.040Z"
+      "at": "2026-11-10T20:04:18.979Z"
     },
     {
       "step": "agent",
-      "at": "2026-10-28T19:37:34.043Z"
+      "at": "2026-11-10T20:04:18.988Z"
     },
     {
       "step": "check",
-      "at": "2026-10-28T19:37:55.168Z"
+      "at": "2026-11-10T20:04:26.094Z"
     },
     {
       "step": "verify",
-      "at": "2026-10-28T19:38:09.019Z"
+      "at": "2026-11-10T20:04:26.139Z"
     },
     {
       "step": "review",
-      "at": "2026-10-28T19:38:13.350Z"
+      "at": "2026-11-10T20:04:28.014Z"
+    },
+    {
+      "step": "assess",
+      "at": "2026-11-10T20:04:28.810Z"
     },
     {
       "step": "pr",
-      "at": "2026-10-28T19:38:20.754Z"
+      "at": "2026-11-10T20:04:36.111Z"
     }
   ],
   "more": [
     {
-      "groupKey": "models/google-gemini",
-      "from": "gemini-2.0-flash",
-      "to": "gemini-3.6-flash",
+      "groupKey": "models/anthropic",
+      "from": "claude-3-haiku-20240307, claude-3-5-sonnet-20241022",
+      "to": "claude-haiku-4-5-20251001, claude-sonnet-5-5",
       "evidence": "verified",
       "mode": "ready",
-      "repo": "teire-dev/nlsh",
-      "number": 6,
-      "title": "Replace retired model gemini-2.0-flash with gemini-3.6-flash",
-      "url": "https://github.com/teire-dev/nlsh/pull/6",
+      "repo": "Blockchain-Oracle/teire-demo-bristow",
+      "number": 7,
+      "title": "Replace 2 retired Anthropic models",
+      "url": "https://github.com/Blockchain-Oracle/teire-demo-bristow/pull/7",
       "state": "open",
       "draft": false,
       "verified": true,
-      "run": "7e9d2d48-21ba-4811-80e9-a58fa53dd6f2"
+      "run": "30fe9028-4ec2-489c-b91b-7200d9b488f0"
     },
     {
-      "groupKey": "pypi/pydantic/2.14.1",
-      "from": "1.10.18",
-      "to": "2.14.1",
+      "groupKey": "go/golang.org/x/net/v0.62.0",
+      "from": "v0.38.0",
+      "to": "v0.62.0",
       "evidence": "verified",
       "mode": "ready",
-      "repo": "teire-dev/examples",
-      "number": 16,
-      "title": "Upgrade pydantic from 1.10.18 to 2.14.1 and adapt the code",
-      "url": "https://github.com/teire-dev/examples/pull/16",
+      "repo": "Blockchain-Oracle/teire-demo-nlsh",
+      "number": 2,
+      "title": "chore(deps): upgrade golang.org/x/net from v0.38.0 to v0.62.0 to fix 17 advisories",
+      "url": "https://github.com/Blockchain-Oracle/teire-demo-nlsh/pull/2",
       "state": "open",
       "draft": false,
       "verified": true,
-      "run": "190c9ecf-5303-48fb-a5ed-76ef07f986e8"
+      "run": "268f1953-b5aa-44f4-9257-2fcf4251846c"
     },
     {
       "groupKey": "npm/form-data/2.5.6",
       "from": "2.3.3",
       "to": "2.5.6",
-      "evidence": "verified",
-      "mode": "ready",
-      "repo": "teire-dev/serve-handler",
-      "number": 16,
+      "evidence": "environment_mismatch",
+      "mode": "draft",
+      "repo": "Blockchain-Oracle/teire-demo-serve-handler",
+      "number": 15,
       "title": "Upgrade form-data from 2.3.3 to 2.5.6 to fix 2 advisories",
-      "url": "https://github.com/teire-dev/serve-handler/pull/16",
+      "url": "https://github.com/Blockchain-Oracle/teire-demo-serve-handler/pull/15",
       "state": "open",
-      "draft": false,
-      "verified": true,
-      "run": "a90850f3-91c1-4e6f-a391-ca8ac4a8620d"
+      "draft": true,
+      "verified": false,
+      "run": "a08e67da-5789-4e46-b1fa-355ae533a487"
     }
   ]
 }

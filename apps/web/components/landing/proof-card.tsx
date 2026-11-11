@@ -14,19 +14,29 @@ const virgil = localFont({ src: "../../app/fonts/Virgil.woff2", display: "swap" 
 const after = (name: "typecheck" | "test") =>
   name === "test" ? hero.checks.tests.after : hero.checks.typecheck.after ? "pass" : "fail";
 
+const isModels = hero.run.ecosystem === "models";
+const broke = hero.broke as Partial<Record<"typecheck" | "test", { exit: number; said: string | null }>>;
+
 /**
- * The hero's proof (revamp S4, the thumbnail the owner chose): the real zod run's checks, what the
- * upgrade broke on the left and what passed after the fix on the right, with the pen's ring around
- * the green column and a note crediting the fix with NVIDIA Nemotron's mark. Every figure comes from
- * the run's committed snapshot; the card opens the run and the note opens its pull request. The pen strokes are rough.js output baked once (`pen.json`), so
- * the page draws them as plain paths. Fixed size so the ring stays on its column; phones zoom it.
+ * The hero's proof (revamp S4, the thumbnail the owner chose): the real run's checks, what broke on
+ * the left and what passed after the fix on the right, with the pen's ring around the green column
+ * and a note crediting the fix with the open-weight model's mark on Otari. A package upgrade shows
+ * its typecheck and tests; a model shutdown shows the retired models (their calls fail) and the
+ * tests. Every figure comes from the run's committed snapshot; the card opens the run and the note
+ * opens its pull request. The pen strokes are rough.js output baked once (`pen.json`), so the page
+ * draws them as plain paths. Fixed size so the ring stays on its column; phones zoom it.
  */
 export function ProofCard({ className }: { className?: string }) {
-  const rows = (["typecheck", "test"] as const).map((name) => ({
-    name: name === "test" ? "tests" : name,
-    broke: hero.broke[name],
-    after: after(name),
-  }));
+  const rows = isModels
+    ? [
+        { name: "models", broke: `✗ ${hero.run.from.split(", ").length} gone`, after: "swapped" },
+        { name: "tests", broke: `✗ exit ${broke.test?.exit ?? 1}`, after: hero.checks.tests.after },
+      ]
+    : (["typecheck", "test"] as const).map((name) => ({
+        name: name === "test" ? "tests" : name,
+        broke: `✗ exit ${broke[name]?.exit ?? 0}`,
+        after: after(name),
+      }));
   return (
     <div
       className={cn(
@@ -36,11 +46,17 @@ export function ProofCard({ className }: { className?: string }) {
     >
       <Link
         href={hero.run.href}
-        aria-label={`The run: ${hero.run.package} ${hero.run.from} to ${hero.run.to} on ${hero.repo}, typecheck and tests fail after the upgrade and pass after the fix`}
+        aria-label={
+          isModels
+            ? `The run: ${hero.run.package} retired ${hero.run.from} on ${hero.repo}; the tests fail after the swap and pass after the fix`
+            : `The run: ${hero.run.package} ${hero.run.from} to ${hero.run.to} on ${hero.repo}, typecheck and tests fail after the upgrade and pass after the fix`
+        }
         className="absolute top-2 left-0 block w-[440px] -rotate-2 rounded-[18px] bg-[#15181e] px-6 pt-5 pb-6 text-hero-ink shadow-[0_40px_90px_rgb(0_0_0/0.55)] ring-1 ring-white/12 transition-[box-shadow,translate] hover:-translate-y-0.5 hover:ring-white/20"
       >
         <p className="mb-3 font-mono text-[13px] text-hero-ink-2">
-          {hero.run.package} {hero.run.from} → {hero.run.to} · the upgrade broke it
+          {isModels
+            ? `${hero.run.package} · ${hero.run.from.split(", ").slice(0, 2).join(", ")} shut down · it broke`
+            : `${hero.run.package} ${hero.run.from} → ${hero.run.to} · the upgrade broke it`}
         </p>
         {rows.map((r) => (
           <div
@@ -49,9 +65,13 @@ export function ProofCard({ className }: { className?: string }) {
             className="grid grid-cols-[100px_112px_44px_1fr] items-center border-t border-white/10 py-3 font-mono text-[22px] whitespace-nowrap"
           >
             <span className="text-[17px] text-hero-ink-2">{r.name}</span>
-            <span className="text-hero-broke">✗ exit {r.broke?.exit}</span>
+            <span className="text-hero-broke">{r.broke}</span>
             <span className="text-center text-hero-ink-2">→</span>
-            <span data-ok className="w-fit text-hero-proven">
+            {/* Long values (143/143, swapped) step down so the pen's ring still holds them. */}
+            <span
+              data-ok
+              className={cn("w-fit text-hero-proven", (r.after ?? "").length > 5 && "text-[18px]")}
+            >
               ✓ {r.after}
             </span>
           </div>

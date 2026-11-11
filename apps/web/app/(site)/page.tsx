@@ -1,3 +1,4 @@
+import { modelDisplayName } from "@teire/engine/constants";
 import { ArrowRight, ArrowUpRight, ShieldAlert } from "lucide-react";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -49,17 +50,34 @@ const _changeOf = (m: { groupKey: string | null; from: string | null; to: string
 };
 
 const MORE_MARK: Record<string, { light: string; dark: string; label: string }> = {
-  "teire-dev/nlsh#6": { ...providerLogo("google-gemini"), label: "Google Gemini" },
-  "teire-dev/examples#16": ECOSYSTEMS.pypi as { light: string; dark: string; label: string },
-  "teire-dev/serve-handler#16": ECOSYSTEMS.npm as { light: string; dark: string; label: string },
+  "Blockchain-Oracle/teire-demo-bristow#7": { ...providerLogo("anthropic"), label: "Anthropic" },
+  "Blockchain-Oracle/teire-demo-nlsh#2": ECOSYSTEMS.go as { light: string; dark: string; label: string },
+  "Blockchain-Oracle/teire-demo-serve-handler#15": ECOSYSTEMS.npm as {
+    light: string;
+    dark: string;
+    label: string;
+  },
 };
 
 const tile = (t: Omit<FlowTile, "id">): FlowTile => ({ id: t.entity, ...t });
+
+/** The hero run's retired models as pairs ("gpt-4 → gpt-5.6-sol"), when it is a model shutdown. */
+const modelPairs = (from: string, to: string) => {
+  const olds = from.split(", ");
+  const news = to.split(", ");
+  return olds.map((o, i) => `${o} → ${news[i] ?? "?"}`);
+};
 
 export default function Home() {
   const subject = subjectMark(hero.run.groupKey);
   const [owner, name] = hero.repo.split("/");
   const tests = hero.checks.tests;
+  // A model shutdown reads differently from a package upgrade: no installed version, no updater.
+  const isModels = hero.run.ecosystem === "models";
+  // A run with no advisory snapshots it as null; the type says what one carries when it is there.
+  const advisory = hero.advisory as { id: string; severity: string } | null;
+  const hasTypecheck =
+    hero.checks.typecheck.before || hero.checks.typecheck.after || "typecheck" in hero.broke;
   return (
     <main className="flex flex-col">
       {/* The one dark band (≤60vh, ≤50vh on phones): the promise, two actions, the flow's first tile on its edge. */}
@@ -85,7 +103,8 @@ export default function Home() {
               When upstream breaks, <em className="font-normal text-cta italic">Teire fixes your code.</em>
             </h1>
             <p className="max-w-xl text-[15px] text-hero-ink-2 sm:text-[17px]">
-              Dependabot bumps the version. Teire fixes the code it breaks, and proves it with your own tests.
+              Open-weight models on Otari find the code a package, API or AI-model change breaks, fix it, and
+              prove the fix with your own tests.
             </p>
             <div className="flex flex-wrap items-center justify-center gap-3 lg:justify-start">
               <Button asChild variant="cta" size="xl" shape="pill">
@@ -123,7 +142,13 @@ export default function Home() {
             <Station
               tile={tile({ entity: "change", state: "done", label: hero.run.package, brand: subject })}
               title="Upstream changes"
-              line="An advisory, on a new major."
+              line={
+                isModels
+                  ? "A model shutdown, quoted from the provider."
+                  : advisory
+                    ? "An advisory, on a new major."
+                    : "A new major."
+              }
               side={
                 <div className="flex flex-col gap-3 md:items-end">
                   <span className="eyebrow">Also</span>
@@ -150,13 +175,26 @@ export default function Home() {
               }
             >
               <div className="flex flex-wrap items-center gap-2">
-                <span className="rounded-full bg-sheet px-3 py-1 font-mono text-[13px] shadow-card">
-                  {hero.run.package} {hero.run.from} → {hero.run.to}
-                </span>
-                {hero.advisory ? (
+                {isModels ? (
+                  modelPairs(hero.run.from, hero.run.to)
+                    .slice(0, 2)
+                    .map((p) => (
+                      <span
+                        key={p}
+                        className="rounded-full bg-sheet px-3 py-1 font-mono text-[13px] shadow-card"
+                      >
+                        {p}
+                      </span>
+                    ))
+                ) : (
+                  <span className="rounded-full bg-sheet px-3 py-1 font-mono text-[13px] shadow-card">
+                    {hero.run.package} {hero.run.from} → {hero.run.to}
+                  </span>
+                )}
+                {advisory ? (
                   <span className="inline-flex items-center gap-1.5 rounded-full bg-broke-soft px-3 py-1 font-mono text-[12px] text-broke">
                     <ShieldAlert className="size-3.5" />
-                    {hero.advisory.id} · {hero.advisory.severity}
+                    {advisory.id} · {advisory.severity}
                   </span>
                 ) : null}
               </div>
@@ -177,7 +215,11 @@ export default function Home() {
                 brand: SPONSORS.github,
               })}
               title={hero.repo}
-              line={`The installed ${hero.run.package} is vulnerable.`}
+              line={
+                isModels
+                  ? "Its calls to the retired models fail since the shutdown."
+                  : `The installed ${hero.run.package} is vulnerable.`
+              }
               side={
                 <div className="flex flex-col gap-3 md:items-end">
                   <span className="eyebrow">Teire reads</span>
@@ -206,7 +248,9 @@ export default function Home() {
               }
             >
               <span className="inline-flex items-center gap-2 self-start rounded-full bg-attention-soft px-3 py-1 font-mono text-[12px] text-attention">
-                {hero.run.package} {hero.run.from} installed
+                {isModels
+                  ? `${hero.reach.sites} uses of the retired models`
+                  : `${hero.run.package} ${hero.run.from} installed`}
               </span>
             </Station>
 
@@ -233,21 +277,29 @@ export default function Home() {
                   <li className="flex items-center gap-3">
                     <TileSquare
                       size="sm"
-                      tile={{
-                        entity: "update",
-                        state: "done",
-                        label: "dependabot-core",
-                        brand: STACK.dependabot,
-                      }}
+                      tile={
+                        isModels
+                          ? { entity: "update", state: "done", label: "Teire's swaps" }
+                          : {
+                              entity: "update",
+                              state: "done",
+                              label: "dependabot-core",
+                              brand: STACK.dependabot,
+                            }
+                      }
                     />
                     <TileLabel
                       size="sm"
                       className="items-start text-left"
-                      tile={{
-                        label: "dependabot-core",
-                        meta: hero.updaterSeconds ? `${hero.updaterSeconds} s` : undefined,
-                        state: "done",
-                      }}
+                      tile={
+                        isModels
+                          ? { label: "Teire's swaps", meta: "the named replacements", state: "done" }
+                          : {
+                              label: "dependabot-core",
+                              meta: hero.updaterSeconds ? `${hero.updaterSeconds} s` : undefined,
+                              state: "done",
+                            }
+                      }
                     />
                   </li>
                   <li aria-hidden className="contents">
@@ -262,8 +314,8 @@ export default function Home() {
                       size="sm"
                       className="items-start text-left"
                       tile={{
-                        label: "Fixer model",
-                        meta: `${hero.fix.calls} calls · $${hero.fix.costUsd}`,
+                        label: hero.fix.model ? modelDisplayName(hero.fix.model) : "Fixer model",
+                        meta: `${hero.fix.calls} calls on Otari · $${hero.fix.costUsd}`,
                         state: "done",
                       }}
                     />
@@ -324,11 +376,15 @@ export default function Home() {
             >
               <dl className="grid max-w-md grid-cols-2 gap-3">
                 <Figure label="tests" before={tests.before ?? "–"} after={tests.after ?? "–"} />
-                <Figure
-                  label="typecheck"
-                  before={hero.checks.typecheck.before ? "pass" : "fail"}
-                  after={hero.checks.typecheck.after ? "pass" : "fail"}
-                />
+                {hasTypecheck ? (
+                  <Figure
+                    label="typecheck"
+                    before={hero.checks.typecheck.before ? "pass" : "fail"}
+                    after={hero.checks.typecheck.after ? "pass" : "fail"}
+                  />
+                ) : (
+                  <Figure label="network during checks" before="off" after="off" />
+                )}
               </dl>
             </Station>
 
