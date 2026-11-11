@@ -77,7 +77,15 @@ Checked on 2026-11-10 and again on 2026-11-11 with `GET /api/v1/tools`: code exe
 - Web search: Allowed.
 - Web fetch: Allowed.
 - Code execution: Follow the deployment default (or Allowed).
-- MCP servers: nothing to add. Teire passes Context7 and its own MCP server inline per request.
+- MCP servers: nothing to add, but turn on **Let requests name their own MCP servers** (Workspace →
+  Tools → MCP servers card). Teire passes Context7 inline per request; with the switch off, Otari
+  answers 400 "This workspace does not let a request name MCP servers by URL" (checked 2026-11-11),
+  and the researcher works from web search and fetch alone.
+
+Guardrails: otari.ai answers "No guardrails service is configured" for request-level profiles
+(`GET /api/v1/tool-settings/guardrails/profiles`, 2026-11-11), so Teire runs its own guardrails
+service (`/api/guardrails`, the contract in Otari's guardrails reference) and names it per request
+(`guardrails: [{profile: "prompt-injection", url, mode: "block"}]`). Nothing to configure.
 
 ## 6. Routing policies (Workspace → Routing → Policies)
 

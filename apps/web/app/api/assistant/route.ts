@@ -1,7 +1,8 @@
-import { ASSISTANT } from "@teire/engine/constants";
+import { ASSISTANT, RESEARCH, SITE } from "@teire/engine/constants";
 import {
   BudgetExceededError,
   type GatewayReceipt,
+  type McpServer,
   noReceipt,
   receiptOf,
   sumReceipts,
@@ -46,6 +47,21 @@ import { runSheet } from "@/lib/run-sheet";
 export const maxDuration = 90;
 
 const newId = createIdGenerator({ prefix: "msg", size: 16 });
+
+const DOCS_MCP: McpServer[] = [
+  {
+    name: "teire",
+    url: `${SITE.url}/api/mcp`,
+    allowed_tools: ["list_changes", "get_change", "search_docs"],
+    purpose_hint: "Teire's change catalog and documentation",
+  },
+  {
+    name: "context7",
+    url: RESEARCH.context7Url,
+    allowed_tools: ["resolve-library-id", "query-docs"],
+    purpose_hint: "Version-specific library documentation",
+  },
+];
 
 const DOCS_TOOLS = ["search_docs", "list_changes", "get_change", "show_steps", "offer_choices"] as const;
 
@@ -178,6 +194,9 @@ export async function POST(request: Request) {
     ...ai.call("assistant", {
       purpose: mode === "docs" ? "assistant-docs" : "assistant",
       conversation: `thread:${thread.id}`,
+      // Docs mode on Otari's MCP loop: Teire's own MCP server (catalog and docs) and Context7, once the
+      // workspace lets requests name MCP servers by URL (TEIRE_MCP=on, docs/otari-setup.md step 5).
+      ...(mode === "docs" && process.env.TEIRE_MCP === "on" ? { mcpServers: DOCS_MCP } : {}),
     }),
     instructions: instructionsFor({
       mode,
