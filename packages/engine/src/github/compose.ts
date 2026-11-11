@@ -318,6 +318,13 @@ function receiptLines(
     out.push(
       `| Read the release notes | ${modelName(notesReceipt.model)} | ${tokens(notesReceipt.tokensIn)} / ${tokens(notesReceipt.tokensOut)} | ${usd(notesReceipt.costUsd)} |`,
     );
+  if (run.research) {
+    const b = run.research.brief;
+    const mcp = b.toolCalls.filter((c) => c.type === "mcp").length;
+    out.push(
+      `| Research: ${b.sources.length} page(s) read through Otari${mcp ? `, ${mcp} MCP call(s)` : ""}${b.proof ? ", code proof in Otari's sandbox" : ""}; guardrail ${run.research.screened} | ${modelName(b.model)} | — | ${usd(b.costUsd)} |`,
+    );
+  }
   if (run.codemods.length) out.push(`| Deterministic edits (${run.codemods.length}) | none | — | $0 |`);
   for (const a of run.attempts) {
     const steps = run.agentSteps.filter((s) =>
@@ -646,6 +653,35 @@ export function composeFixPullRequest(input: FixPullRequestInput): { title: stri
       out.push(
         `${blockquote(sanitizeUpstream(`${note.quote.slice(0, 400)}${note.quote.length > 400 ? "…" : ""}`, upstreamRepoOf(note.url)))}\n>\n> — ${link(urlLabel(note.url) ?? "release notes", note.url)}${note.declared ? " (from this repository's teire.yml)" : ""}`,
       );
+
+    // What the researcher read before the fix (S04), through Otari's search, fetch and MCP tools.
+    if (run.research && run.research.screened !== "refused") {
+      const b = run.research.brief;
+      out.push("### What the researcher read");
+      out.push(sanitizeUpstream(b.summary.slice(0, 900), null));
+      if (b.changes.length)
+        out.push(
+          b.changes
+            .map(
+              (c) =>
+                `- \`${escapeCell(c.api)}\`: ${sanitizeUpstream(escapeCell(c.before).slice(0, 200), null)} → ${sanitizeUpstream(escapeCell(c.after).slice(0, 200), null)}${c.source ? ` (${link(urlLabel(c.source) ?? "source", c.source)})` : ""}`,
+            )
+            .join("\n"),
+        );
+      if (b.sources.length)
+        out.push(
+          `Pages read: ${b.sources.map((src) => link(src.title ? escapeCell(src.title).slice(0, 80) : (urlLabel(src.url) ?? src.url), src.url)).join(" · ")}`,
+        );
+      if (b.proof?.ok)
+        out.push(
+          `Signatures of both versions, printed in Otari's code sandbox:\n\n\`\`\`text\n${b.proof.stdout.slice(0, 1500)}\n\`\`\``,
+        );
+      out.push(
+        run.research.screened === "passed"
+          ? "The brief passed Otari's prompt-injection guardrail before the fixer read it."
+          : "The brief couldn't be screened by the guardrail; the fixer read it as untrusted advice.",
+      );
+    }
 
     // The commits between the versions, as dependabot-core's updater listed them (D-13).
     if (run.upstream) {
