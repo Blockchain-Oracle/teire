@@ -784,7 +784,8 @@ export function composeFixPullRequest(input: FixPullRequestInput): { title: stri
         ...run.codemods.filter((c) => c.file === f.path).map((c) => c.reason),
       ];
       const by = mods.length ? `Teire: ${mods.join(", ")}` : "";
-      const agent = run.attempts.length ? `${modelName(run.attempts.at(-1)?.model ?? "")}` : "";
+      const last = run.attempts.at(-1);
+      const agent = last ? modelName(answered(last)) : "";
       out.push(
         `| \`${f.path}\` | ${escapeCell([by, agent && (moved || !mods.length) ? `edited by ${agent}` : ""].filter(Boolean).join("; ") || "edited")} |`,
       );
@@ -939,7 +940,8 @@ export function composeApiChangePullRequest(input: ApiChangePullRequestInput): {
     out.push("| File | Change |", "|---|---|");
     for (const f of run.files) {
       const mods = run.codemods.filter((c) => c.file === f.path).map((c) => c.reason);
-      const agent = run.attempts.length ? modelName(run.attempts.at(-1)?.model ?? "") : "";
+      const last = run.attempts.at(-1);
+      const agent = last ? modelName(answered(last)) : "";
       out.push(
         `| \`${f.path}\` | ${escapeCell([mods.length ? `Teire: ${mods.join(", ")}` : "", agent && !mods.length ? `edited by ${agent}` : ""].filter(Boolean).join("; ") || "edited")} |`,
       );

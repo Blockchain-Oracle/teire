@@ -57,9 +57,9 @@ opened ready, model total $0.053, billed by Otari to that installation's own all
   Teire's docs mode.
 - **Guardrails.** Release notes, vendor pages and the research brief name a prompt-injection
   guardrail in block mode; Otari runs it before any model reads them. A demo repository plants an
-  instruction to the AI in a changelog: on the zod run Otari refused it ("Changelog 4.0.0"), Teire
-  read zod's 55 other sources without it, and PR #25 upgraded zod with 4/4 tests passing
-  (https://teire.84.46.247.92.sslip.io/runs/d522ac54-682c-4571-9c7d-4222ebee5b0e?tile=change).
+  instruction to the AI in a changelog: on the zod run Otari refused it, Teire read zod's own
+  release notes without it, and PR #25 upgraded zod with 4/4 tests passing; the PR's body says what
+  was refused (https://teire.84.46.247.92.sslip.io/runs/2f804cf8-de46-4de7-aca8-a0769d82b320?tile=change).
 
 ## Proof
 

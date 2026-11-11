@@ -115,5 +115,5 @@ It's live right now, and it's open source. Teire — when upstream breaks, Teire
 ---
 Have ready
 - Signed in as yourself; you're the operator, so Settings › Allowances shows every end user and the Move buttons. Rehearse part 13 once: move yourself to teire-walk-tiny, ask, then back to teire-person-daily.
-- Parts 11 and 12 use the zod run: https://teire.84.46.247.92.sslip.io/runs/d522ac54-682c-4571-9c7d-4222ebee5b0e?tile=change (Context shows "Researcher read" and "Refused by Otari's guardrail"; it opened PR #25).
+- Parts 11 and 12 use the zod run: https://teire.84.46.247.92.sslip.io/runs/2f804cf8-de46-4de7-aca8-a0769d82b320?tile=change (Context shows "Researcher read" and "Refused by Otari's guardrail"; PR #25's body and receipt show the refusal and the routing policies).
 - Fill in HANDLE (Teire has no X account yet), or cut the X line.
