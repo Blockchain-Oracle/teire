@@ -108,7 +108,8 @@ export const RESEARCH = {
   /** Two searches, two fetches and the answer: an unbounded loop read 8 pages for $0.12 in 125 s. */
   toolIterations: 5,
   maxOutputTokens: 4_000,
-  timeoutMs: 150_000,
+  /** Every Python run's search passed 150 s on 2026-11-11 (npm openai took 105 s, zod 14 s). */
+  timeoutMs: 210_000,
   /** A 429 is asked once more after Otari's Retry-After, or this when it sends none; never longer than the cap. */
   rateLimitWaitMs: 8_000,
   rateLimitMaxWaitMs: 30_000,

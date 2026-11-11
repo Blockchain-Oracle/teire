@@ -143,6 +143,29 @@ async function askOnce(input: ResearchInput, withMcp: boolean) {
   }
 }
 
+/** The search didn't finish or found nothing, but Otari's sandbox did: the brief is the proof alone. */
+function proofOnly(input: ResearchInput, proof: CodeProof, started: number, error: unknown): ResearchBrief {
+  const why =
+    error === null
+      ? "found nothing to add"
+      : error instanceof Error && error.name === "TimeoutError"
+        ? "timed out"
+        : "didn't finish";
+  return {
+    summary: `The web search through Otari ${why}; Otari's code sandbox installed ${input.name} ${input.from} and ${input.to} side by side and printed the signature of each API the code calls.`,
+    changes: [],
+    sources: [],
+    toolCalls: [],
+    mcp: false,
+    proof,
+    model: input.ai.modelId("researcher"),
+    provider: null,
+    costUsd: 0,
+    requestId: null,
+    ms: Date.now() - started,
+  };
+}
+
 /** Every page Otari's tools returned in the loop (a brief may cite these), and the ones it fetched. */
 function sourcesOf(calls: OtariToolCall[]): { returned: ResearchSource[]; fetched: Set<string> } {
   const seen = new Map<string, string>();
@@ -160,20 +183,33 @@ function sourcesOf(calls: OtariToolCall[]): { returned: ResearchSource[]; fetche
 /** The brief, or null when the researcher found nothing to say (the run goes on without it). */
 export async function research(input: ResearchInput): Promise<ResearchBrief | null> {
   const started = Date.now();
+  // Otari's sandbox needs no search: the code proof starts with the loop, so a slow search (every
+  // Python run's on 2026-11-11 hit the limit) no longer takes the proof down with it.
+  const proofRun =
+    input.ecosystem === "pypi" && input.from ? pythonProof(input).catch(() => null) : Promise.resolve(null);
   let withMcp = mcpByUrl;
   let result: Awaited<ReturnType<typeof ask>>;
   try {
-    result = await askOnce(input, withMcp);
+    try {
+      result = await askOnce(input, withMcp);
+    } catch (error) {
+      if (!withMcp || !/MCP servers by URL/i.test(otariSaid(error))) throw error;
+      mcpByUrl = false;
+      withMcp = false;
+      result = await askOnce(input, false);
+    }
   } catch (error) {
-    if (!withMcp || !/MCP servers by URL/i.test(otariSaid(error))) throw error;
-    mcpByUrl = false;
-    withMcp = false;
-    result = await askOnce(input, false);
+    const proof = await proofRun;
+    if (proof?.ok) return proofOnly(input, proof, started, error);
+    throw error;
   }
   const receipt = receiptOf(result);
   const { returned: read, fetched } = sourcesOf(receipt.toolCalls);
   const text = result.text.trim();
-  if (!text) return null;
+  if (!text) {
+    const proof = await proofRun;
+    return proof?.ok ? proofOnly(input, proof, started, null) : null;
+  }
   // The reader gives the prose its shape, citing only pages the loop actually returned.
   const shaped = await generateText({
     ...input.ai.call("reader", { purpose: "research-brief" }),
@@ -193,7 +229,7 @@ export async function research(input: ResearchInput): Promise<ResearchBrief | nu
   const shapedReceipt = receiptOf(shaped);
   const allowed = new Set(read.map((s) => s.url));
   const brief = shaped.output;
-  const proof = input.ecosystem === "pypi" && input.from ? await pythonProof(input).catch(() => null) : null;
+  const proof = await proofRun;
   return {
     summary: brief.summary,
     changes: brief.changes.map((c) => ({ ...c, source: allowed.has(c.source) ? c.source : "" })),
