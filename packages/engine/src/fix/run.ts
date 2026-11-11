@@ -180,7 +180,10 @@ export interface FileChange {
 export interface FixAttempt {
   n: number;
   replan: boolean;
+  /** The id Teire asked for: a catalog id or a routing policy (`TEIRE_MODEL_FIXER`). */
   model: string;
+  /** The model Otari served the attempt's last step with (`Otari-Model`): a policy's tier-down or backup shows here. */
+  servedModel?: string | null;
   failover: boolean;
   finished: boolean;
   evidence: Evidence["kind"];
@@ -999,7 +1002,7 @@ async function runLead(input: FixInput): Promise<FixRun> {
       if (triage.cause && baseline.install.ok) evidence.reasons.push(`the install failed: ${triage.cause}`);
       emit({
         step: "review",
-        model: triage.model,
+        model: triage.servedModel || triage.model,
         detail: triage.error ?? `install (${triage.kind}): ${triage.cause}`,
         ms: triage.ms,
         costUsd: triage.costUsd,
@@ -1131,7 +1134,7 @@ async function runLead(input: FixInput): Promise<FixRun> {
       if (review)
         emit({
           step: "review",
-          model: review.model,
+          model: review.servedModel || review.model,
           detail:
             review.error ??
             (review.problems.length
@@ -1159,7 +1162,7 @@ async function runLead(input: FixInput): Promise<FixRun> {
       if (review && patch)
         emit({
           step: "review",
-          model: review.model,
+          model: review.servedModel || review.model,
           detail:
             review.error ??
             (review.problems.length
@@ -1316,7 +1319,7 @@ async function runLead(input: FixInput): Promise<FixRun> {
           }));
           emit({
             step: "agent",
-            model: s.model,
+            model: s.servedModel || s.model,
             calls,
             detail: s.tools.length
               ? s.tools.map((t) => `${t.name}(${JSON.stringify(t.input).slice(0, 120)})`).join(", ")
@@ -1336,6 +1339,7 @@ async function runLead(input: FixInput): Promise<FixRun> {
         n,
         replan,
         model: agent.model,
+        servedModel: agent.steps.findLast((s) => s.servedModel)?.servedModel ?? null,
         failover: agent.failover,
         finished: agent.finished,
         evidence: current.evidence.kind,
@@ -1354,7 +1358,7 @@ async function runLead(input: FixInput): Promise<FixRun> {
         }).catch(unreviewed("diff"));
         emit({
           step: "review",
-          model: review.model,
+          model: review.servedModel || review.model,
           detail:
             review.error ??
             (review.problems.length

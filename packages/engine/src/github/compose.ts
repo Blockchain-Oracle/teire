@@ -244,11 +244,21 @@ export function displayQuote(quote: string) {
     .join(" · ");
 }
 
+/** A step's model as Otari served it (`Otari-Model`), else the id Teire asked for. */
+function answered(x: { model: string; servedModel?: string | null }) {
+  return x.servedModel || x.model;
+}
+
+/** A routing-policy name (`teire-fixer`): neither a catalog id (`vendor/model`) nor a `provider:model` selector. */
+function isPolicy(id: string | undefined): id is string {
+  return !!id && !/[/:]/.test(id);
+}
+
 /** The closing line names the models that worked on this PR, and says so when none did. */
 function footer(runUrl: string | undefined, run: FixRun, extra: (string | undefined)[] = []) {
   const models = [
     ...new Set(
-      [...run.attempts.map((a) => a.model), run.review?.model, ...extra]
+      [...run.attempts.map(answered), run.review ? answered(run.review) : undefined, ...extra]
         .filter((m): m is string => !!m)
         .map(modelName),
     ),
@@ -307,17 +317,21 @@ function verificationLines(
   return out;
 }
 
+/** The release notes' reading: the model asked for, the one Otari served, and what it cost. */
+type NotesReceipt = {
+  model: string;
+  servedModel?: string | null;
+  tokensIn: number;
+  tokensOut: number;
+  costUsd: number;
+};
+
 /** The Receipt section: model, tokens and cost per step, and sandbox time. */
-function receiptLines(
-  run: FixRun,
-  backendNote: string,
-  notesReceipt?: { model: string; tokensIn: number; tokensOut: number; costUsd: number },
-  notesRefused = 0,
-) {
+function receiptLines(run: FixRun, backendNote: string, notesReceipt?: NotesReceipt, notesRefused = 0) {
   const out = ["### Receipt", "| Step | Model | Tokens in / out | Cost |", "|---|---|---|---|"];
   if (notesReceipt)
     out.push(
-      `| Read the release notes${notesRefused ? `; guardrail refused ${notesRefused}` : ""} | ${modelName(notesReceipt.model)} | ${tokens(notesReceipt.tokensIn)} / ${tokens(notesReceipt.tokensOut)} | ${usd(notesReceipt.costUsd)} |`,
+      `| Read the release notes${notesRefused ? `; guardrail refused ${notesRefused}` : ""} | ${modelName(answered(notesReceipt))} | ${tokens(notesReceipt.tokensIn)} / ${tokens(notesReceipt.tokensOut)} | ${usd(notesReceipt.costUsd)} |`,
     );
   if (run.research) {
     const b = run.research.brief;
@@ -334,18 +348,18 @@ function receiptLines(
     const tin = steps.reduce((n, s) => n + s.tokensIn, 0);
     const tout = steps.reduce((n, s) => n + s.tokensOut, 0);
     out.push(
-      `| Fix attempt ${a.n}${a.replan ? " (replanned)" : ""}: ${a.steps} steps → ${a.evidence.replace(/_/g, " ")} | ${modelName(a.model)}${a.failover ? " (failover)" : ""} | ${tokens(tin)} / ${tokens(tout)} | ${usd(a.costUsd)} |`,
+      `| Fix attempt ${a.n}${a.replan ? " (replanned)" : ""}: ${a.steps} steps → ${a.evidence.replace(/_/g, " ")} | ${modelName(answered(a))}${a.failover ? " (failover)" : ""} | ${tokens(tin)} / ${tokens(tout)} | ${usd(a.costUsd)} |`,
     );
   }
   if (run.triage)
     out.push(
-      `| Why the install failed: ${run.triage.error ? "not concluded" : run.triage.kind} | ${modelName(run.triage.model)} | ${tokens(run.triage.tokensIn)} / ${tokens(run.triage.tokensOut)} | ${usd(run.triage.costUsd)} |`,
+      `| Why the install failed: ${run.triage.error ? "not concluded" : run.triage.kind} | ${modelName(answered(run.triage))} | ${tokens(run.triage.tokensIn)} / ${tokens(run.triage.tokensOut)} | ${usd(run.triage.costUsd)} |`,
     );
   if (run.review)
     out.push(
       run.review.scope === "change"
-        ? `| Review of the dependency change: ${run.review.error ? "not concluded" : run.review.problems.length ? `${run.review.problems.length} thing(s) to look at` : "nothing needs a person"} | ${modelName(run.review.model)} | ${tokens(run.review.tokensIn)} / ${tokens(run.review.tokensOut)} | ${usd(run.review.costUsd)} |`
-        : `| Review of the passing diff: ${run.review.problems.length ? `${run.review.problems.length} problem(s) noted` : "no problems found"}${run.review.refuted?.length ? `, ${run.review.refuted.length} refuted by the checks` : ""} | ${modelName(run.review.model)} | ${tokens(run.review.tokensIn)} / ${tokens(run.review.tokensOut)} | ${usd(run.review.costUsd)} |`,
+        ? `| Review of the dependency change: ${run.review.error ? "not concluded" : run.review.problems.length ? `${run.review.problems.length} thing(s) to look at` : "nothing needs a person"} | ${modelName(answered(run.review))} | ${tokens(run.review.tokensIn)} / ${tokens(run.review.tokensOut)} | ${usd(run.review.costUsd)} |`
+        : `| Review of the passing diff: ${run.review.problems.length ? `${run.review.problems.length} problem(s) noted` : "no problems found"}${run.review.refuted?.length ? `, ${run.review.refuted.length} refuted by the checks` : ""} | ${modelName(answered(run.review))} | ${tokens(run.review.tokensIn)} / ${tokens(run.review.tokensOut)} | ${usd(run.review.costUsd)} |`,
     );
   const sandboxMs = [...run.baseline.checks, ...run.after.checks].reduce(
     (n, c) => n + c.ms,
@@ -356,6 +370,17 @@ function receiptLines(
   );
   if (run.depCache) out.push(`| Package cache: ${run.depCache.note} | — | — | — |`);
   out.push(`Model total: **${usd(run.costUsd + (notesReceipt?.costUsd ?? 0))}**.`);
+  const policies = [
+    ...new Set(
+      [notesReceipt?.model, ...run.attempts.map((a) => a.model), run.triage?.model, run.review?.model].filter(
+        isPolicy,
+      ),
+    ),
+  ];
+  if (policies.length)
+    out.push(
+      `Routed by Otari policies ${policies.map((p) => `\`${p}\``).join(", ")}: each names the main model, a cheaper one once the payer's allowance is 80% used, and the backups tried when a host fails.`,
+    );
   return out;
 }
 
@@ -365,7 +390,7 @@ function reviewRisks(run: FixRun) {
     ...sandboxNotes(run),
     ...(run.review?.problems ?? []).map(
       (p) =>
-        `Review (${modelName(run.review?.model ?? "")}) of \`${p.file}\`: ${escapeCell(p.problem).slice(0, 300)}`,
+        `Review (${modelName(run.review ? answered(run.review) : "")}) of \`${p.file}\`: ${escapeCell(p.problem).slice(0, 300)}`,
     ),
   ];
 }
@@ -384,7 +409,7 @@ function sandboxNotes(run: FixRun) {
 function reviewRefuted(run: FixRun) {
   return (run.review?.refuted ?? []).map(
     (p) =>
-      `<sub>The review (${modelName(run.review?.model ?? "")}) questioned \`${p.file}\`: ${escapeCell(p.problem).slice(0, 240)} Kept: ${p.evidence}.</sub>`,
+      `<sub>The review (${modelName(run.review ? answered(run.review) : "")}) questioned \`${p.file}\`: ${escapeCell(p.problem).slice(0, 240)} Kept: ${p.evidence}.</sub>`,
   );
 }
 
@@ -402,7 +427,7 @@ export interface FixPullRequestInput {
   notes: MigrationNote[];
   /** Behaviour changes read from the notes (candidate records, quoted). */
   behaviour: ChangeV2[];
-  notesReceipt?: { model: string; tokensIn: number; tokensOut: number; costUsd: number };
+  notesReceipt?: NotesReceipt;
   /** Release-note documents Otari's prompt-injection guardrail refused, left out of the reading. */
   notesRefused?: string[];
   /** The updater resolved the package only this far (D103): the target was capped, and why. */
@@ -805,7 +830,7 @@ export function composeFixPullRequest(input: FixPullRequestInput): { title: stri
     out.push(
       `\`@teire rebase\` · \`@teire recreate\` · \`@teire explain\` · \`@teire ignore ${instance.name}\``,
     );
-    out.push(footer(input.runUrl, run, [input.notesReceipt?.model]));
+    out.push(footer(input.runUrl, run, [input.notesReceipt ? answered(input.notesReceipt) : undefined]));
     return joinBlocks(foldSections(out));
   };
   for (const [diff, sites, notes] of [

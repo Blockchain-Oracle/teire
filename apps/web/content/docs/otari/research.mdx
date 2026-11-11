@@ -10,7 +10,7 @@ A fix run that the deterministic edits didn't finish reaches the fixer, and befo
 
 1. **Search** the web (Otari's `otari_web_search`, at most two searches) for the package's release notes and migration guide.
 2. **Fetch** the best pages (`otari_web_fetch`, at most two).
-3. **Read the target version's docs** through the [Context7](https://context7.com) MCP server, named in the request (`mcp_servers`), when the Otari workspace lets requests name MCP servers.
+3. **Read the target version's docs** through the [Context7](https://context7.com) MCP server, named in the request (`mcp_servers`). Otari connects to it and runs its tools in the same loop; the receipt counts the MCP calls.
 4. Write what changed for the APIs your code calls, with before and after.
 
 The reader (DeepSeek V4.1 Flash) then turns that prose into a brief: a summary, each changed API with before and after, and its source. A source must be a page Otari's tools actually returned in the loop; anything else is dropped. A plain version bump that the deterministic edits finished is never researched.

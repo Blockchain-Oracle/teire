@@ -49,15 +49,17 @@ or have `/tools` report the direct route's availability separately.
 
 ---
 
-## 4. A routing policy in another workspace fails as "Unknown or unsupported model"
+## 4. An unknown model or policy name answers only "Unknown or unsupported model"
 
-**What happens.** Policies saved in the dashboard answered "Unknown or unsupported model
-'teire-fixer'" for every key of the organization, and `GET /api/v1/models` (which lists policies beside
-the models) showed none. Policies resolve only in the key's workspace (`services/policy_store.py`),
-so they had been saved in another workspace, and nothing in the error or the dashboard said so.
+**What happens.** Calls to `teire-fixer` answered "Unknown or unsupported model 'teire-fixer'" for
+every key of the organization. We read that as a policy the key couldn't see, since policies resolve
+only in the key's workspace (`services/policy_store.py`); in fact the key's workspace, the
+organization's only one, held no policies at all. The 400 reads the same whether the name is a
+policy in another workspace, a policy that doesn't exist, or a model the catalog lacks, and only
+`GET /api/v1/models` (which lists policies beside the models) told us which.
 
-**Suggested.** Show a policy's workspace (and the keys that can call it) in the dashboard, and make
-the 400 say "no model, alias or routing policy named … in this key's workspace".
+**Suggested.** Make the 400 say which workspace it looked in: "no model, alias or routing policy
+named 'teire-fixer' in workspace 'Default workspace'".
 
 ---
 

@@ -18,7 +18,21 @@ Teire sends every model call to [Otari](https://otari.ai) (`https://api.otari.ai
 | researcher | MiniMax M3 | Before a fix, searches the web, reads the migration guide and the target's docs, and writes a brief with its sources | `TEIRE_MODEL_RESEARCHER` |
 | assistant | gpt-oss-120b | Ask Teire's chat | `TEIRE_MODEL_ASSISTANT` |
 
-Each role sends a catalog id, so Otari chooses among that model's hosts by price, health and latency and falls back to the next host on a failure. An override can be another catalog id, a pinned `provider:model` selector, or the name of a routing policy. The models were picked by measuring them on Teire's own jobs: see [Evaluation](/docs/otari/evaluation).
+The models were picked by measuring them on Teire's own jobs: see [Evaluation](/docs/otari/evaluation).
+
+## One routing policy per role
+
+Each role calls a routing policy on Otari by name (`TEIRE_MODEL_FIXER=teire-fixer`, and so on), so which model serves a call is set in Otari's dashboard, not in Teire's code. Each policy names the host that answered best in Teire's measurements, switches to a cheaper model once the payer's allowance is 80% used, and tries its backups in order when a host fails before it starts answering.
+
+| Policy | Serves first | From 80% of the allowance | Backups, in order |
+|---|---|---|---|
+| `teire-fixer` | GLM 5.3 on Fireworks | DeepSeek V4.1 Flash on DeepInfra | GLM 5.3 on Together, GLM 5.3 on Mistral, DeepSeek V4 Pro on DeepInfra |
+| `teire-reviewer` | DeepSeek V4 Pro on DeepInfra | DeepSeek V4.1 Flash on DeepInfra | DeepSeek V4 Pro on Together, then on Nebius, GLM 5.3 on Together |
+| `teire-reader` | DeepSeek V4.1 Flash on DeepInfra | gpt-oss-120b on DeepInfra | DeepSeek V4.1 Flash on Mistral, then on Fireworks, gpt-oss-120b on DeepInfra |
+| `teire-researcher` | MiniMax M3 on DeepInfra | DeepSeek V4.1 Flash on DeepInfra | MiniMax M3 on Fireworks, then on Nebius, DeepSeek V4.1 Flash on DeepInfra |
+| `teire-assistant` | gpt-oss-120b on DeepInfra | (already the cheapest) | gpt-oss-120b on Together, then on Nebius, DeepSeek V4.1 Flash on DeepInfra |
+
+A seventh policy, `teire-fallback-check`, starts on an offering that refuses structured output, so every call to it shows a fallback: `Otari-Fallback: true` after two attempts, served from its backup. `scripts/otari-offerings.ts --policies` calls all six before a role is pointed at its policy. The receipt names the model Otari served and the policy that routed it, and a role can go back to a catalog id (Otari's own automatic host selection) or a pinned `provider:model` selector by changing its variable.
 
 ## Who pays
 
@@ -38,7 +52,7 @@ A person who runs out is told when it comes back, and nobody else's work stops. 
 |---|---|
 | End users and budgets | Every call is billed to a person or an installation; work waits for its own allowance |
 | Spend ceiling | Teire's whole key has a ceiling; the trust page shows what is left |
-| Automatic provider selection and fallback | Every role; the receipt says "after a fallback" with the attempt count |
+| Routing policies | One per role: main model, a cheaper one at 80% of the payer's allowance, backups on failure; the receipt says "after a fallback" with the attempt count |
 | `Otari-Conversation-Id` | Every step of a fix run and every Ask Teire thread stays on one host, so its prompt cache is reused |
 | Web search and web fetch | The researcher, and discovery of a new provider's deprecation pages |
 | MCP | The researcher reads the target's docs through Context7; Ask Teire's docs mode reads Teire's own [MCP server](/docs/otari/research#teires-mcp-server) |

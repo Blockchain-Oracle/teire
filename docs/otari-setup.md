@@ -78,9 +78,11 @@ Checked on 2026-11-10 and again on 2026-11-11 with `GET /api/v1/tools`: code exe
 - Web fetch: Allowed.
 - Code execution: Follow the deployment default (or Allowed).
 - MCP servers: nothing to add, but turn on **Let requests name their own MCP servers** (Workspace →
-  Tools → MCP servers card). Teire passes Context7 inline per request; with the switch off, Otari
-  answers 400 "This workspace does not let a request name MCP servers by URL" (checked 2026-11-11),
-  and the researcher works from web search and fetch alone.
+  Tools → MCP servers card). Teire passes Context7 and its own `/api/mcp` inline per request; with the
+  switch off, Otari answers 400 "This workspace does not let a request name MCP servers by URL", and
+  the researcher works from web search and fetch alone. Turned on 2026-11-11 and checked with an
+  inline request on `teire-assistant`: `mcp:teire/search_docs` and `mcp:context7/resolve-library-id`
+  both `completed`. The web app then gets `TEIRE_MCP=on` (Ask Teire's docs mode).
 
 Guardrails: otari.ai answers "No guardrails service is configured" for request-level profiles
 (`GET /api/v1/tool-settings/guardrails/profiles`, 2026-11-11), so Teire runs its own guardrails
@@ -100,11 +102,17 @@ Teire switches a role to its policy only after each policy answers a test call
 falls back across up to five hosts of the same model.
 
 **Create them in the workspace that holds the `teire-service` key.** A policy belongs to one
-workspace, and a key resolves only its own workspace's policies (`policy_store.py`). Checked
-2026-11-11: the six policies entered that day answer "Unknown or unsupported model" for every key,
-and `GET /api/v1/models` (which lists policies beside the models) shows none, so they are in another
-workspace. `pnpm --filter @teire/engine exec tsx scripts/otari-offerings.ts --policies` says when they
-resolve.
+workspace, and a key resolves only its own workspace's policies (`policy_store.py`). In the dashboard:
+Routing → Create policy → **Tier down on budget** (name, main model, 80 %, the cheaper model), then
+the policy's page → Fallback chain → **Add a backup** for each entry below; `teire-assistant` and
+`teire-fallback-check` are plain **Fallback** policies.
+
+Created 2026-11-11 in the Default workspace (the organization's only one, which holds the key).
+`pnpm --filter @teire/engine exec tsx scripts/otari-offerings.ts --policies` answered `ok` for all
+six through the service key; `teire-fallback-check` was served by `deepinfra` with `attempts: 2,
+fallback: true`. `TEIRE_MODEL_<ROLE>=teire-<role>` is set on the web and worker apps. Earlier the
+same day every key answered "Unknown or unsupported model 'teire-fixer'": the workspace held no
+policies then.
 
 | Policy             | When 80 % of the budget is used                  | Default                                          | On failure, in order                                                                                                                |
 | ------------------ | ------------------------------------------------ | ------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------- |

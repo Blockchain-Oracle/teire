@@ -58,13 +58,14 @@ issue is drafted from here and approved before it is posted). Source references 
     organization search provider (`pick_direct_search_instance`); the built-in tool runs on the
     deployment's own. Teire now falls back to the built-in tool when the direct route says so
     (`discover/web.ts`). `/fetch` has no such split: it answers directly.
-13. **A routing policy saved in the dashboard is invisible to the keys.** Six policies entered on
-    2026-11-11 (`teire-fixer`, …) answer "Unknown or unsupported model" for every key of the
-    organization (the service key, an older service key, an ordinary key), and `GET /api/v1/models`,
-    which lists aliases and policies beside the models, shows none. Policies are scoped to a
-    workspace and a key resolves only its own workspace's, so a policy saved in another workspace than
-    the key's fails this way; the dashboard could say which workspace a policy is in next to the keys
-    that can call it, and the 400 could say "no policy or model named …" so the cause is easier to find.
+13. **An unknown policy name answers only "Unknown or unsupported model".** Calls to `teire-fixer` on
+    2026-11-11 answered "Unknown or unsupported model" for every key of the organization (the service
+    key, an older service key, an ordinary key), and `GET /api/v1/models`, which lists aliases and
+    policies beside the models, showed none. We took it for a policy saved in another workspace; on
+    signing in, the organization's only workspace held no policies, and the six were created there and
+    resolved at once (`scripts/otari-offerings.ts --policies`, all six `ok`, `teire-fallback-check`
+    with `Otari-Fallback: true` after two attempts). The 400 could say which workspace it looked in, so
+    "doesn't exist here" and "exists elsewhere" read differently.
 
 ## Worked well
 

@@ -63,11 +63,15 @@ export function Receipt({
       fallbacks: m.fallbacks + (c.fallback ? 1 : 0),
     });
   }
+  // Calls asked for by routing-policy name (`teire-fixer`), not a catalog id or `provider:model`.
+  const policies = [...new Set(calls.map((c) => c.model).filter((m) => !/[/:]/.test(m)))];
   const seconds = (ms: number | null) => (ms === null ? "—" : `${(ms / 1000).toFixed(1)} s`);
   return (
     <div className="mx-auto w-full max-w-xl rounded-lg bg-card p-5 font-mono text-xs leading-6 shadow-card">
       <p className="mb-2 text-center text-muted-foreground">RECEIPT</p>
-      <p className="mb-1 text-muted-foreground">models · through Otari</p>
+      <p className="mb-1 text-muted-foreground">
+        models · through Otari{policies.length ? ` · policies ${policies.join(", ")}` : ""}
+      </p>
       {byModel.size ? (
         [...byModel].map(([model, m]) => (
           <Row

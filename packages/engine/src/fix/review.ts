@@ -289,6 +289,8 @@ export async function reviewFix(input: {
 
 export interface InstallTriage {
   model: string;
+  /** The model Otari served (`Otari-Model`), when the call answered. */
+  servedModel?: string | null;
   /** One sentence, in the install output's own terms: what stopped the install. */
   cause: string;
   kind: "conflict" | "toolchain" | "registry" | "network" | "build" | "other";

@@ -40,25 +40,27 @@ response), its retry and failover logic (catalog ids fall back across hosts by t
 own cost ledger and daily cap (a service key with end users gives every person and installation its
 own allowance, enforced by the gateway, with a reset time on the refusal). One key reaches five
 open-weight model families, and search, fetch, MCP and code execution run in the same loop as the
-model. What we'd ask for: routing policies that say which workspace they belong to (ours didn't
-resolve for the key and nothing said why), the decision provider the catalog lists, and a hosted
-guardrail profile.
+model, and one routing policy per role moves a person who is running low to a cheaper model before
+they run out. What we'd ask for: an error that names the workspace when a model or policy name isn't
+found (ours said only "Unknown or unsupported model"), the decision provider the catalog lists, and a
+hosted guardrail profile.
 
 ## For the feedback recording
 
 Spoken, 3–5 minutes, on screen:
 
 1. **What did you build with Otari, and which features did you use?** Show the bristow PR receipt
-   (GLM 5.3, DeepSeek V4 Pro), Settings › Allowances (per-person and per-installation budgets),
+   (GLM 5.3, DeepSeek V4 Pro), Otari's Routing page (one policy per role, each with a tier-down and
+   backups), Settings › Allowances (per-person and per-installation budgets),
    the trust page's ceiling, a run's "Researcher read" list (web search and fetch), the guardrail
    refusing the planted zod changelog, `/api/mcp`.
 2. **What worked well?** `usage.cost_usd` on every response; end users with budgets on a service
    key; typed refusals (`Otari-Budget-Scope`, `Retry-After`); one OpenAI-compatible URL for five
    model families with structured output; tools and model in one loop.
 3. **What didn't work?** Rune listed but not served (`/systemone` "one of: none"); `/tools` says
-   search is available while `/search` says no search tool is configured; routing policies invisible
-   to the key with only "Unknown or unsupported model"; MCP by URL off by default with no hint in the
-   quickstart; web tools `workspace_disabled` on a fresh workspace.
+   search is available while `/search` says no search tool is configured; an unknown policy name
+   answers only "Unknown or unsupported model", without the workspace it looked in; MCP by URL off by
+   default with no hint in the quickstart; web tools `workspace_disabled` on a fresh workspace.
 4. **What's missing, and what would you change?** `remaining_usd` and `resets_at` on an end user; a
    hosted `prompt-injection` guardrail profile; the workspace shown beside a policy and the keys that
    can call it; `Otari-Error-Code` on guardrail refusals.

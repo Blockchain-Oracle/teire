@@ -135,15 +135,17 @@ async function Live() {
     })
     .from(llmCalls)
     .where(gte(llmCalls.createdAt, week));
+  // By the model Otari served: a call asked for by routing-policy name counts under what answered it.
+  const answered = sql<string>`coalesce(${llmCalls.servedModel}, ${llmCalls.model})`;
   const byModel = await db
     .select({
-      model: llmCalls.model,
+      model: answered,
       calls: sql<number>`count(*)::int`,
       cost: sql<string>`sum(${llmCalls.costUsd})`,
     })
     .from(llmCalls)
     .where(gte(llmCalls.createdAt, week))
-    .groupBy(llmCalls.model);
+    .groupBy(answered);
   const outcomes = await db
     .select({
       kind: sql<string>`coalesce(${runs.evidenceKind}, ${runs.status})`,

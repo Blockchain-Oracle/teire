@@ -99,7 +99,9 @@ export function ProofSheet({ initial }: { initial: RunSheetData }) {
 
   const { run, repo, artifact, verification } = sheet;
   const active = ACTIVE.has(run.status);
-  const model = sheet.calls.find((c) => c.purpose === "fix")?.model ?? sheet.calls[0]?.model ?? null;
+  // The model Otari served (`Otari-Model`); the asked id may be a routing policy's name.
+  const call = sheet.calls.find((c) => c.purpose === "fix") ?? sheet.calls[0];
+  const model = call ? call.servedModel || call.model : null;
   // What the run did, without the records it keeps as data (its lines, the PR text read back).
   const steps = sheet.events.filter((e) => !isRecord(e));
   const events = steps.map((e) => ({ ...e, at: new Date(e.at) }));

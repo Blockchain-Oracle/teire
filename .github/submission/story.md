@@ -46,9 +46,10 @@ opened ready, model total $0.053, billed by Otari to that installation's own all
   operator moves or pauses anyone from Settings › Allowances.
 - **Budgets and spending limits.** A ceiling on the whole key, shown live on the trust page; Otari's
   refusals become typed errors with a reset time.
-- **Routing and fallbacks.** Each role sends a catalog id; Otari picks the host and falls back across
-  up to five, and the receipt names the host and any fallback. One `Otari-Conversation-Id` per fix
-  run keeps it on one host so the prompt cache is reused.
+- **Routing and fallbacks.** Each role calls its own Otari routing policy: the host that measured
+  best, a cheaper model once the payer's allowance is 80% used, and three backups when a host fails.
+  The receipt names the policy, the host and any fallback. One `Otari-Conversation-Id` per fix run
+  keeps it on one host so the prompt cache is reused.
 - **Web search and fetch, MCP, code execution.** Before the fixer starts, the researcher reads the
   change in Otari's own tool loop: web search, web fetch, and the target's docs through Context7 over
   MCP. For a Python package it installs both versions in Otari's code sandbox and prints the
@@ -83,7 +84,5 @@ Cloudflare Containers, GitHub Apps, Coolify.
 
 ## Honest limits
 
-Routing policies were drafted but saved in another workspace than Teire's key, so roles use Otari's
-automatic provider selection; MCP by URL needs one workspace switch; otari.ai serves no request-level
-guardrail profile, so the guardrail is Teire's own service run by Otari; code proof covers Python
-packages only.
+otari.ai serves no request-level guardrail profile, so the guardrail is Teire's own service run by
+Otari; code proof covers Python packages only.
