@@ -1,8 +1,4 @@
 {
-  "phone/ask": {
-    "width": 780,
-    "height": 1688
-  },
   "phone/pr-anthropic": {
     "width": 780,
     "height": 1688
@@ -14,22 +10,6 @@
   "phone/scan": {
     "width": 780,
     "height": 1688
-  },
-  "wide/ask-action": {
-    "width": 1600,
-    "height": 900
-  },
-  "wide/ask-docked": {
-    "width": 1600,
-    "height": 900
-  },
-  "wide/ask-overview": {
-    "width": 1600,
-    "height": 900
-  },
-  "wide/ask-why": {
-    "width": 1600,
-    "height": 900
   },
   "wide/change-detail": {
     "width": 1600,
@@ -92,10 +72,6 @@
     "height": 900
   },
   "wide/scan": {
-    "width": 1600,
-    "height": 900
-  },
-  "wide/settings": {
     "width": 1600,
     "height": 900
   },

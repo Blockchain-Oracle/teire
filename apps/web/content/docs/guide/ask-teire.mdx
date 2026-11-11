@@ -12,12 +12,6 @@ icon: MessageSquare
 
 Ask Teire is the assistant inside the dashboard. It answers from Teire's own records: your findings, runs, pull requests, the catalog of changes, your `teire.yml` and these docs. Each answer comes back as cards drawn with the dashboard's own flows: a run as its breadcrumb trail, a change as its fan-out to your repositories, figures as tiles. When you want something done, it shows the exact action and you click **Confirm**.
 
-<Shot
-  name="ask-overview"
-  alt="Ask Teire floating over the Overview: 'What needs me today?' answered in a few lines: runs going or waiting, 40 open PRs with 25 proven, 183 changes reaching code, the upcoming shutdowns and the repositories that couldn't be checked, with related links and follow-up questions."
-  caption="'What needs me today?' answered with the Overview card: what needs a person and why, with each run's proof chain."
-/>
-
 ## Open it
 
 - **The launcher** sits in the bottom-right corner of every dashboard page, every run, scan and change page once you're signed in, and these docs. Press <kbd>⌘I</kbd> (<kbd>Ctrl I</kbd>) anywhere it's offered.
@@ -25,12 +19,6 @@ Ask Teire is the assistant inside the dashboard. It answers from Teire's own rec
 - **Explain** (the sparkle) on a finding row, or on a repository's header, opens it with the question already asked.
 
 The panel opens above the launcher. **Dock** it to make it a right sidebar you can resize (360 to 600 pixels): on a wide screen the page moves over to make room, and it stays docked, with your thread, as you move between pages. On a phone it opens full height.
-
-<Shot
-  name="ask-docked"
-  alt="Ask Teire docked beside a run's proof sheet: 'Explain this run' answered with the run's card (golang.org/x/text to v0.41.0 on teire-dev/nlsh, Proven, build and typecheck pass, tests 10/11 on both sides, PR #4) and the answer in plain words."
-  caption="Docked beside a run: the chip in the header names the run, and 'Explain this run' answers from its ledger."
-/>
 
 ## What it knows about the page you're on
 
@@ -54,21 +42,9 @@ Type <kbd>@</kbd> to mention a repository, run, change or open pull request by n
 
 Every card says when its record was read ("as of 3 min ago") and links to where it lives in Teire. Links in an answer go only to pages a card returned, so Ask Teire can't send you to a page that doesn't exist or to a site a repository mentions.
 
-<Shot
-  name="ask-why"
-  alt="'Why is there no PR for anthropic on teire-dev/bristow?' answered with the gates Teire walked: the last run's evidence was a regression, so it opened issue #12 instead of a PR, and the run page has Open draft anyway."
-  caption="Why no PR: Teire's gates for one finding, in the order the worker applies them. The first one that holds is the answer."
-/>
-
 ## It acts only when you click
 
 Ask Teire can propose: set the fix mode (one repository or the installation's default), Fix now, Rescan, Pause and Resume, Ignore and Unignore, Refresh, Rebase or Recreate a PR, Cancel, Retry or Re-verify a run, Open draft anyway, a config PR, a starter config PR, and Fix in all. Each proposal is a card with the exact action, what it means, and a trail of what Confirm sets going (dashed until you click). Nothing happens until you click **Confirm**; the trail's first step then pulses while Teire works and reads its answer, the same way the dashboard's buttons do (see [Dashboard](/docs/guide/dashboard)).
-
-<Shot
-  name="ask-action"
-  alt="A proposed action card: 'Set fix mode to Ask first on teire-dev/nlsh', what Ask first means (nothing new starts until you ask; PRs already open keep being refreshed), 'Teire checks your write access on GitHub when you confirm', and Confirm and Cancel buttons."
-  caption="A proposal: the exact action, what it means, and Confirm. Teire checks your write access on GitHub when you click."
-/>
 
 - **The card is the action.** Confirm sends back a proposal Teire signed when it showed the card: it can only do what the card shows, for you, within the hour.
 - **The same checks as any button.** Teire's worker checks your write access on GitHub before it acts (Fix in all checks it on each repository); changing the installation's default fix mode needs an organization admin or the account owner.
@@ -84,12 +60,6 @@ A finding's reason, a provider's quote, release notes, a log line or a PR descri
 ## Threads
 
 Each conversation is a thread. **History** lists yours, newest first; search finds a word in any message, and you can rename or delete a thread. Under each answer: copy it as Markdown, ask again, and mark it helpful or not. A reply stopped part way (Stop, or closing the tab) is kept and marked. Threads are kept for 90 days after their last message.
-
-<Phone
-  name="ask"
-  alt="Ask Teire on a phone, full height: the chip teire-dev/nlsh, the repository's runs as trails, and the answer: five changes reaching its code and the open pull request for each, with one related link per page."
-  caption="On a phone: full height, the same cards."
-/>
 
 ## The model and its budget
 

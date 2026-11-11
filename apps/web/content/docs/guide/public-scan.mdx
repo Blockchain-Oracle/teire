@@ -41,13 +41,13 @@ The report page updates by itself while the scan runs. Most repositories take on
 
 <Tabs items={["npm", "Python", "Go"]}>
 <Tab value="npm">
-<Shot name="report-axios" alt="Report for axios/axios: npm 948 read across 279 files, 10 changes reaching this code of 20 checked, one dry run; each finding's source quoted with its osv.dev link, such as the body-parser denial of service and the vite path traversal advisories." caption="An advisory reaches the installed version: each finding says so, quotes the advisory and links it." />
+<Shot name="report-axios" alt="Report for axios/axios: npm 940 read across 279 files, 10 changes reaching this code of 20 checked, one dry run; each finding's source quoted with its osv.dev link, such as the body-parser denial of service and the vite path traversal advisories." caption="An advisory reaches the installed version: each finding says so, quotes the advisory and links it." />
 </Tab>
 <Tab value="Python">
-<Shot name="report-flask" alt="Report for pallets/flask: PyPI 331 read across 82 files, 7 changes reaching this code of 9 checked; werkzeug's safe_join advisory and cryptography's PKCS#7 advisory, each quoted with its source." caption="A Python report: what reaches the code, each with the advisory's own words." />
+<Shot name="report-flask" alt="Report for pallets/flask: PyPI 331 read across 83 files, 7 changes reaching this code of 9 checked; werkzeug's safe_join advisory and cryptography's PKCS#7 advisory, each quoted with its source." caption="A Python report: what reaches the code, each with the advisory's own words." />
 </Tab>
 <Tab value="Go">
-<Shot name="report-gin" alt="Report for gin-gonic/gin: Go 32 read across 90 files, 1 change reaching of 4 checked: golang.org/x/net's HTTP/2 server memory exhaustion, called at gin.go:806 and render/json.go:187, both traced, with 3 more mentions checked and 3 changes ruled out." caption="A Go module: the advisory's function traced to the exact lines that call it." />
+<Shot name="report-gin" alt="Report for gin-gonic/gin: Go 32 read across 99 files, 1 change reaching of 4 checked: golang.org/x/net's HTTP/2 server memory exhaustion, called at gin.go:686 and render/json.go:167, both traced, with 3 more mentions checked and 3 changes ruled out." caption="A Go module: the advisory's function traced to the exact lines that call it." />
 </Tab>
 </Tabs>
 
