@@ -64,6 +64,17 @@ Your job becomes reviewing a pull request. When Teire can't prove the fix, it sa
 
 OpenAI shut down `gpt-3.5-turbo` and `gpt-4` on 2026-10-23. [teire-demo-bristow](https://github.com/Blockchain-Oracle/teire-demo-bristow), a Ruby agent framework, still used them 29 times.
 
+<p align="center">
+  <a href="https://teire.84.46.247.92.sslip.io/runs/c154b1d4-ed40-4860-912d-5c587916c2e2">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset=".github/assets/model-retirement-dark.png" />
+      <source media="(prefers-color-scheme: light)" srcset=".github/assets/model-retirement-light.png" />
+      <img src=".github/assets/model-retirement-light.png" width="960" alt="Sequence: Teire reads OpenAI's deprecations page with verbatim quotes, finds 29 uses in teire-demo-bristow, makes 31 deterministic swaps, sees one spec fail after the swaps, sends GLM 5.3 on Otari to fix it in 6 steps for $0.046 billed to the installation's allowance, verifies 143/143 tests with every network request refused, has DeepSeek V4 Pro review the diff, and opens ready pull request 8 for $0.053." />
+    </picture>
+  </a>
+</p>
+<p align="center"><a href="https://teire.84.46.247.92.sslip.io/runs/c154b1d4-ed40-4860-912d-5c587916c2e2">Open the run</a> · <a href=".github/diagrams/readme-model-retirement.mmd">Edit the Mermaid source</a></p>
+
 1. **Notice.** Teire read OpenAI's [deprecations page](https://developers.openai.com/api/docs/deprecations.md) into records, each kept only if its quote appears word for word on the page.
 2. **Impact.** 26 uses of `gpt-3.5-turbo`, 2 of `gpt-4` and 1 of `gpt-3.5-turbo-0613`, each linked to its line at the commit Teire read.
 3. **Fix.** 31 deterministic swaps to the replacements OpenAI names (`gpt-5.6-terra`, `gpt-5.6-sol`). One spec still failed: a test class declared the old model. **GLM 5.3** found and fixed it in 6 steps for $0.046. **DeepSeek V4 Pro** reviewed the passing diff ($0.0074): no problems.

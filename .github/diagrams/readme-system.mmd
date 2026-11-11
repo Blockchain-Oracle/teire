@@ -2,34 +2,39 @@ flowchart LR
   dev([Developer])
   cli["teire CLI and MCP<br/>scan · check · coding agents"]
   gh["GitHub<br/>repositories · PRs · check runs<br/>Dashboard issue"]
-  subgraph teire["Teire"]
+  subgraph teire["Teire on Coolify"]
     direction TB
-    web["Web app on Vercel<br/>dashboard · public scan · catalog · docs"]
-    db[("Postgres on Coolify<br/>findings · runs · catalog · outbox")]
-    worker["Worker on Coolify<br/>scans · fix runs · webhooks"]
+    web["Web app<br/>dashboard · allowances · catalog<br/>docs · MCP server · guardrail"]
+    db[("Postgres<br/>findings · runs · receipts · outbox")]
+    worker["Worker<br/>scans · fix runs · webhooks"]
     web -->|"outbox + NOTIFY"| db
     db -->|claimed| worker
+  end
+  subgraph otari["Otari by Mozilla.ai"]
+    direction TB
+    models["Open-weight models<br/>GLM 5.3 · DeepSeek V4 Pro · V4.1 Flash<br/>MiniMax M3 · gpt-oss-120b<br/>host chosen, fallback on failure"]
+    budgets["Allowances<br/>one end user per person and installation<br/>ceiling on the key"]
+    tools["Tools<br/>web search · web fetch<br/>MCP · code execution"]
+    guard["Guardrails<br/>prompt-injection check<br/>before any model reads a page"]
   end
   subgraph out["Read and run on demand"]
     direction TB
     reg["Registries and advisories<br/>npm · PyPI · Go proxy · crates.io<br/>RubyGems · Maven · OSV"]
-    pages["Provider change pages<br/>OpenAI · Anthropic · Gemini<br/>Token Factory · Stripe · discovered"]
-    tavily["Tavily<br/>finds a new provider's notices"]
-    tf["Nebius Token Factory<br/>NVIDIA Nemotron 3 Ultra<br/>Super as failover"]
-    resolver["dependabot-core's updater<br/>under gVisor on Coolify<br/>manifest and lockfile change"]
-    tfsb["Nebius Token Factory Sandboxes<br/>public repos and dry runs<br/>checks with no network"]
-    sandbox["Cloudflare Containers<br/>private repos<br/>checks with the network off"]
+    pages["Provider change pages<br/>OpenAI · Anthropic · Gemini<br/>Stripe · discovered"]
+    sandbox["Cloudflare Containers<br/>install, then checks<br/>with the network off"]
   end
 
   dev -->|installs the App| gh
-  dev -->|signs in, scans| web
+  dev -->|signs in, asks| web
   cli -->|public catalog| web
   gh -->|webhooks| web
   worker -->|"branch, PR, check run, issue"| gh
   worker --> reg
   worker -->|quote gate| pages
-  worker --> tavily
-  worker -->|"read, trace, fix, review"| tf
-  worker -->|"one job per upgrade"| resolver
-  worker -->|"baseline and after"| tfsb
+  worker -->|"fix, review, read, research"| models
+  web -->|"Ask Teire, billed to the person"| models
+  models --- budgets
+  models --- tools
+  models --- guard
+  guard -->|"/validate"| web
   worker -->|"baseline and after"| sandbox

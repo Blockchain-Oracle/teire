@@ -1,18 +1,19 @@
 sequenceDiagram
   autonumber
-  participant R as teire-dev/examples/wrapped-models
+  participant R as teire-demo-bristow (Ruby)
   participant T as Teire worker
-  participant W as Groq's deprecations page
-  participant N as Nemotron 3 Ultra on Token Factory
-  participant S as Sandbox
+  participant P as OpenAI's deprecations page
+  participant O as Otari
+  participant S as Cloudflare Containers
   participant G as GitHub
-  T->>R: scan: groq-sdk installed, Groq has no hand-written reader
-  T->>W: found through the SDK and Tavily, then fetched
-  T->>N: read the page into changes, each with a verbatim quote
-  Note over T: kept only where the quote matches the page:<br/>llama-3.1-8b-instant and llama-3.3-70b-versatile shut down 2026-08-16
-  T->>N: the IDs sit in a tier registry: where do they reach a request?
-  N-->>T: TIERS.quick.id → t.id → model: in src/llm.ts:12
-  T->>N: one model has one named replacement: swapped by Teire. The other has two: Nemotron picks one and fixes what breaks
-  T->>S: baseline: install, tsc, vitest (0/4 pass: the models are gone)
-  T->>S: after: the same checks (4/4 pass)
-  T->>G: the ready PR it would open (Verified.) with quotes, call sites, verification and receipt
+  T->>P: read into changes, each kept only with a verbatim quote
+  Note over T,P: gpt-3.5-turbo and gpt-4 shut down 2026-10-23<br/>replacements gpt-5.6-terra and gpt-5.6-sol
+  T->>R: scan: 29 uses of the retired models, each linked to its line
+  T->>R: 31 deterministic swaps to the named replacements
+  T->>S: baseline 143/143 · after the swaps one spec fails
+  T->>O: fixer GLM 5.3, billed to the installation's allowance
+  O-->>T: 6 steps: a test class still declared the old model ($0.046)
+  T->>S: after: 143/143 tests, every network request refused
+  T->>O: reviewer DeepSeek V4 Pro reads the passing diff ($0.0074)
+  O-->>T: no problems found
+  T->>G: ready pull request 8, Verified, model total $0.053
