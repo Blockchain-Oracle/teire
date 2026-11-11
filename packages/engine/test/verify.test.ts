@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { bumpRange, lockfileCommand, planManifestEdits } from "../src/fix";
+import {
+  bumpRange,
+  jsTransaction,
+  lockfileCommand,
+  npmTargetedLockCommand,
+  planManifestEdits,
+} from "../src/fix";
 import type { JsProject } from "../src/inventory/js";
 import { memoryTree } from "../src/inventory/tree";
 import {
@@ -261,5 +267,50 @@ describe("upgrade transaction (manifest)", () => {
     expect(edit?.after).toBe(manifest.replace("^4.104.0", "^7.37.0"));
     expect(lockfileCommand("npm")).toContain("--package-lock-only");
     expect(lockfileCommand("pnpm")).toContain("--lockfile-only");
+  });
+
+  it("locks an npm direct bump at exactly its target, with the edit's own range style", () => {
+    const command = (range: string) => {
+      const tree = memoryTree({
+        "npm-major/package.json": JSON.stringify(
+          { name: "npm-major", dependencies: { openai: range } },
+          null,
+          2,
+        ),
+        "npm-major/package-lock.json": "{}",
+      });
+      const openai = {
+        ecosystem: "npm" as const,
+        name: "openai",
+        version: "4.104.0",
+        declaredRange: range,
+        direct: true,
+        scope: "prod" as const,
+        workspace: ".",
+        manifestPath: "npm-major/package.json",
+        source: "registry" as const,
+        resolvedBy: "lockfile" as const,
+      };
+      const p = project("npm", {
+        root: "npm-major",
+        lockfile: "npm-major/package-lock.json",
+        instances: [openai],
+      });
+      return jsTransaction(tree, p, openai, "7.47.0").commands[0];
+    };
+    expect(command("^4.104.0")).toEqual([
+      "npm",
+      "install",
+      "openai@7.47.0",
+      "--save-prefix=^",
+      "--package-lock-only",
+      "--ignore-scripts",
+      "--no-audit",
+      "--no-fund",
+    ]);
+    expect(command("~4.104.0")).toContain("--save-prefix=~");
+    expect(command("4.104.0")).toContain("--save-exact");
+    // A range Teire can't restate with one prefix is regenerated as before.
+    expect(npmTargetedLockCommand("openai", "7.47.0", ">=4 <8")).toBeNull();
   });
 });

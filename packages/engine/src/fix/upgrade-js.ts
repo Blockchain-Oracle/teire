@@ -167,6 +167,28 @@ export function lockfileCommand(manager: JsManager, lockfileVersion?: string): s
 }
 
 /**
+ * npm's lockfile-only install for a direct bump, naming the target as Dependabot does: a plain
+ * regeneration resolves the edited range to the newest version it allows (a bump to `^7.47.0`
+ * locked 7.55.0 and the readback stopped the PR, 2026-11-11). Only the lockfile is read back, so
+ * package.json stays Teire's own edit; the save prefix matches that edit so the lock's root entry
+ * agrees with it. Null for a range that isn't `^x`, `~x` or an exact version.
+ */
+export function npmTargetedLockCommand(name: string, target: string, range: string): string[] | null {
+  if (range !== target && range !== `^${target}` && range !== `~${target}`) return null;
+  const save = range === target ? ["--save-exact"] : [`--save-prefix=${range[0]}`];
+  return [
+    "npm",
+    "install",
+    `${name}@${target}`,
+    ...save,
+    "--package-lock-only",
+    "--ignore-scripts",
+    "--no-audit",
+    "--no-fund",
+  ];
+}
+
+/**
  * Lockfile-only bump of a transitive dependency (advisories with a fixed version, D71): first
  * within its parents' ranges with the package manager's own update; when a parent's range forbids
  * the fix, an override pins it (npm `overrides`, pnpm `pnpm.overrides`, yarn and bun
@@ -275,11 +297,20 @@ export function jsTransaction(
       target,
       project.widen?.includes(instance.manifestPath) === true,
     );
+    // One plain version line in the project's own package.json, under npm: lock exactly the target.
+    const [only] = manifest;
+    const rootManifest = project.root === "." ? "package.json" : `${project.root}/package.json`;
+    const targeted =
+      manager === "npm" && manifest.length === 1 && only && !only.note && !instance.aliasName
+        ? only.path === rootManifest
+          ? npmTargetedLockCommand(instance.name, target, only.to)
+          : null
+        : null;
     return {
       describe:
         manifest.map((e) => `${e.path}: ${e.from} → ${e.to}`).join(", ") || `${instance.name} → ${target}`,
       manifest,
-      commands: [regenerate],
+      commands: [targeted ?? regenerate],
       readBack,
       ...(lockfile ? { lockfilePath: lockfile } : {}),
     };
