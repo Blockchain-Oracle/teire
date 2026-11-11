@@ -30,25 +30,19 @@ When your code calls an API host that has no reader, Teire **discovers** the pro
 Then it looks for the provider's notices:
 
 1. `llms.txt` on the docs host and the domain, scoring links that say deprecat, retire, sunset or changelog,
-2. if that finds no deprecations page, a **Tavily** search limited to the provider's own domains,
+2. if that finds no deprecations page, an **Otari web search** limited to the provider's own domains,
 3. last, `/docs/deprecations` and `/deprecations` on its busiest docs hosts.
 
 At most 3 pages are kept per provider, deprecations first. Every fetch and redirect must stay on the provider's domains.
 
-<Shot
-  name="provider-groq"
-  alt="Groq, discovered in code: its three pages as a flow (Nemotron reads them, quotes checked, 43 changes), each page with its status and last check, the retirement timeline with the latest past shutdown, and the models with no date yet."
-  caption="Groq has no hand-written reader. Teire found it through groq-sdk, read its three pages with Nemotron, and lists every model change it confirmed."
-/>
-
 ## The quote gate
 
-A page read by Nemotron becomes one record per model or endpoint, each with a verbatim quote of up to 400 characters. Code then checks every record before Teire acts on it:
+A page the reader model reads, once it passes the [prompt-injection guardrail](/docs/otari/research) that Otari runs, becomes one record per model or endpoint, each with a verbatim quote of up to 400 characters. Code then checks every record before Teire acts on it:
 
 1. The quote is found in the page Teire fetched.
 2. The model ID is inside its own quote. A replacement missing from the quote is removed.
 3. Every source is on the provider's official domains.
-4. For a page Nemotron read, the ID, the replacement and the date all appear in the quotes.
+4. For a page the reader model read, the ID, the replacement and the date all appear in the quotes.
 
 An item whose quote is not in the page, or whose ID is not in its quote, is dropped. A record that fails the final checks is kept as **unconfirmed** and never applied to code on its own. Where your code passes its ID as a model, the scan says **check by hand** in a needs-a-human issue, naming why the record couldn't be confirmed. Comment `@teire fix` to try it anyway: the run uses the record and opens a **draft** labelled `unconfirmed`, with a warning at the top, whatever the checks say. The same rule applies to package release notes: an item that doesn't quote the fetched text is dropped.
 
@@ -62,7 +56,7 @@ ast-grep searches the strings of your JS/TS, Python, Go, Rust, Ruby, Java and Ko
 | In a model-named variable, or under a model key in config | **affected** |
 | Anywhere else, such as a registry, a list or a test | **inconclusive**, until traced |
 
-Nemotron then traces the inconclusive ones. It is shown the files holding the IDs and the JS/TS or Python files that import them, and asked whether each ID reaches a request. Its answer counts only if the line it cites exists in a file it was shown and names a model. Test and fixture files are never fix sites.
+The reader model then traces the inconclusive ones. It is shown the files holding the IDs and the JS/TS or Python files that import them, and asked whether each ID reaches a request. Its answer counts only if the line it cites exists in a file it was shown and names a model. Test and fixture files are never fix sites.
 
 If your code builds the provider's client from an environment variable such as `OPENAI_BASE_URL`, the deployment decides which service answers. Teire marks those findings inconclusive instead of affected.
 

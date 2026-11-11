@@ -18,7 +18,7 @@ Sign in with GitHub. Teire asks GitHub which installations you can see and shows
 
 The sidebar holds the installation switcher, the five pages and the installation's repositories, each with its main language's logo. An olive dot (lime in dark mode) marks a repository Teire is working on now. <kbd>⌘K</kbd> (<kbd>Ctrl K</kbd>) jumps to a page, a repository, a change or a run, acts on the repository you're on, or searches these docs. <kbd>⌘I</kbd> opens [Ask Teire](/docs/guide/ask-teire). Every list, tab and filter has its own address.
 
-<Tabs items={["Overview", "Repositories", "A repository", "Changes for you", "Runs", "Settings"]}>
+<Tabs items={["Overview", "Repositories", "A repository", "Changes for you", "Settings"]}>
 <Tab value="Overview">
 
 <Shot
@@ -46,12 +46,6 @@ The sidebar holds the installation switcher, the five pages and the installation
 />
 
 <Shot
-  name="repo-prs"
-  alt="teire-dev/examples's Pull requests: each PR as a breadcrumb of chevrons, the package, dependabot-core, Token Factory, the checks before and after, Review and PR #24, with Re-verify and Refresh."
-  caption="Pull requests as breadcrumbs: tap a step to see its evidence without leaving the list."
-/>
-
-<Shot
   name="repo-config"
   alt="teire-dev/examples's Config: a setting picker with before and after chips and Open config PR, then every key as a cell grouped into Fixes, Scans, Upgrades, Pull requests and Ecosystems, each with a dot for where it came from."
   caption="Config: every key as a cell, coloured by where it was set; pick one to change it by pull request."
@@ -64,15 +58,6 @@ The sidebar holds the installation switcher, the five pages and the installation
   name="changes-for-you"
   alt="Changes for you, 297: each change with its countdown, its provider's logo fanning out to the repositories it reaches, each branch in what Fix now would do there, and Fix in all."
   caption="Changes for you: each change fans out to the repositories it reaches."
-/>
-
-</Tab>
-<Tab value="Runs">
-
-<Shot
-  name="app-runs"
-  alt="Runs filtered to Needs you: each run as its breadcrumb trail, the package, the repository, dependabot-core, Token Factory, the checks, and the issue or draft it ended in."
-  caption="Runs: every run as its trail, filtered by what needs you, evidence or repository."
 />
 
 </Tab>
@@ -95,7 +80,7 @@ The sidebar holds the installation switcher, the five pages and the installation
 
 **Runs** lists every run as its trail, newest first, with the same filters the Overview links to.
 
-**Settings** has five sections. **Organization** holds the installation's default fix mode and whether security fixes start on their own; only an organisation admin or the account's owner can change these. **Repositories** holds each repository's fix mode, **Installations** is where Teire is installed (with Refresh from GitHub), **Usage** is above, and **Account** is who you're signed in as.
+**Settings** has seven sections. **Organization** holds the installation's default fix mode and whether security fixes start on their own; only an organisation admin or the account's owner can change these. **Repositories** holds each repository's fix mode, **Installations** is where Teire is installed (with Refresh from GitHub), **Private registries** holds credentials for your own registries, **Usage** is above, **Allowances** shows what Otari lets you and your installation spend ([Allowances](/docs/otari/allowances)), and **Account** is who you're signed in as.
 
 ### Taking Teire's access away
 
@@ -131,12 +116,6 @@ Above the tabs, **Fixes** sets the repository's fix mode: **Automatic**, **Ask f
 A run page has **Cancel** while the run works: within seconds the model calls and the updater stop, its sandboxes close, and nothing is published after it. A failed or cancelled run has **Retry**.
 
 A run whose PR is open has **Re-verify**: both sides run again on what the PR would merge, with its code unchanged. The after side is GitHub's test merge of the PR into the base branch as it is now; the baseline is that base. The result lands on the PR only if it still has the same head and base: a new **Teire** check run, a comment, and the draft state and evidence label set to what the checks now show. Re-verify runs under every fix mode, since it changes no code.
-
-<Shot
-  name="run-reverify"
-  alt="A Re-verify run for github.com/BurntSushi/toml v1.4.0 → v1.6.0 on teire-dev/nlsh: Finished, Proven, on Token Factory Sandboxes in 1m 22s with no model calls; build, typecheck and test pass before and after."
-  caption="Re-verify on teire-dev/nlsh #7: the PR merged into today's base, checked again; verified, so it stayed ready."
-/>
 
 A run that ended in a "needs a human" issue has **Open draft anyway**: Teire opens its best diff as a draft PR titled **Unconfirmed**, with the evidence that stopped it, for you to finish by hand. **Share** copies the run's link and says who can open it.
 

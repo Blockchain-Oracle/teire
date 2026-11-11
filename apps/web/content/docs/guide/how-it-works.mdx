@@ -6,7 +6,7 @@ icon: Workflow
 
 <Diagram
   name="five-steps"
-  alt="Notice: registries, provider pages and OSV for what your code uses; Impact: the exact call sites; Fix: a swap or Nemotron; Verify: your checks before vs after with the network off; Pull request: the evidence decides ready, draft or issue."
+  alt="Notice: registries, provider pages and OSV for what your code uses; Impact: the exact call sites; Fix: a swap or the fixer model; Verify: your checks before vs after with the network off; Pull request: the evidence decides ready, draft or issue."
   caption="The five steps every run takes."
 />
 
@@ -62,13 +62,13 @@ Next come deterministic edits:
 - in Python, an import rewritten where the target moved the class or function, and a keyword argument the function no longer takes removed from each call that passes it,
 - for Go, `go fix -inline` for the functions the upgraded module marks `//go:fix inline`, keeping only the changes that call them through the module's own import; inlined method calls are left to the agent.
 
-If verification is already good enough for a pull request at that point, the run stops without starting the agent. A model swap then costs nothing; a package upgrade has already paid for Nemotron to read its release notes.
+If verification is already good enough for a pull request at that point, the run stops without starting the agent. A model swap then costs nothing; a package upgrade has already paid for the reader model to read its release notes.
 
-Otherwise NVIDIA Nemotron 3 Ultra works as an agent with its tools: `read_file`, `search`, `edit_file`, `run_check`, `lookup_docs`, `update_plan`, `finish`, and `request_upgrade` where dependabot-core's updater decides the ecosystem. It may edit only the files the change reaches and the files your check output names. It never edits manifests, lockfiles, config or CI; another dependency it needs moved goes through the updater. It has up to 24 steps per attempt and 4 attempts. After 2 failed verifications it starts over from a plan. When an attempt passes, a review pass reads the diff and sends back any real problem once; a run with no code edits gets a short review of the dependency change instead. See [Nemotron on Token Factory](/docs/nemotron).
+Otherwise the fixer, GLM 5.3, works as an agent with its tools: `read_file`, `search`, `edit_file`, `run_check`, `lookup_docs`, `update_plan`, `finish`, and `request_upgrade` where dependabot-core's updater decides the ecosystem. It may edit only the files the change reaches and the files your check output names. It never edits manifests, lockfiles, config or CI; another dependency it needs moved goes through the updater. It has up to 24 steps per attempt and 4 attempts. After 2 failed verifications it starts over from a plan. When an attempt passes, a review pass reads the diff and sends back any real problem once; a run with no code edits gets a short review of the dependency change instead. Before the fixer starts, the researcher (MiniMax M3) reads the migration guide and the target's docs through Otari and writes a brief with its sources. See [Teire on Otari](/docs/otari).
 
 <Diagram
   name="fix-loop"
-  alt="Flow: upgrade transaction, deterministic edits, your checks before vs after; pass goes to the pull request, fail goes to the Nemotron agent, which loops until checks pass or attempts run out; a passing fix goes through the review pass."
+  alt="Flow: upgrade transaction, deterministic edits, your checks before vs after; pass goes to the pull request, fail goes to the fixer model, which loops until checks pass or attempts run out; a passing fix goes through the review pass."
   caption="How a fix run decides what to do next."
 />
 

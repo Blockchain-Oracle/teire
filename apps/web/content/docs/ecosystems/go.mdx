@@ -56,13 +56,7 @@ For advisories, govulncheck decides. If your code **calls** the vulnerable funct
 
 ## In the evaluation
 
-`golang-jwt/jwt` v4.5.2 → v5.3.1 on demo-go-major: 4 sites, verified by Nemotron 3 Ultra in 1 attempt. The fix replaced `StandardClaims` with `RegisteredClaims`, Unix times with `NewNumericDate`, and the `ValidationError` bitmask with `errors.Is(err, jwt.ErrTokenExpired)`. See [Anatomy of a Teire PR](/docs/guide/anatomy-of-a-pr). The same upgrade on demo-go-clean was judged **not affected** by type, and verified as a plain bump.
-
-<Shot
-  name="dryrun-go-diff"
-  alt="The Go run's diff: auth/token.go switching to jwt/v5, RegisteredClaims and NewNumericDate."
-  caption="The code Nemotron changed for golang-jwt v5, in auth/token.go."
-/>
+`golang-jwt/jwt` v4.5.2 → v5.3.1 on demo-go-major: 4 sites, verified. The fix replaced `StandardClaims` with `RegisteredClaims`, Unix times with `NewNumericDate`, and the `ValidationError` bitmask with `errors.Is(err, jwt.ErrTokenExpired)`. See [Anatomy of a Teire PR](/docs/guide/anatomy-of-a-pr). The same upgrade on demo-go-clean was judged **not affected** by type, and verified as a plain bump.
 
 <Callout type="warn" title="Limits">
   Private modules that the public proxy can't serve keep the versions `go.mod` states, with a note in the report. Release notes are read from GitHub, GitLab or Bitbucket; a vanity path (`go.uber.org/zap`, `golang.org/x/net`) is followed through its `go-import` tag the way `go get` does, and a module in a subdirectory reads its `sub/vX.Y.Z` tags. Self-hosted forges aren't read. The sandbox has Go 1.27.2, and targets needing a newer Go aren't excluded. `-race` isn't run, because the sandbox has no cgo toolchain.

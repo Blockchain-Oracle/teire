@@ -1,23 +1,23 @@
 ---
 title: Architecture
-description: A Next.js app on Vercel, a worker and Postgres on Coolify, sandboxes on Cloudflare Containers, and Nemotron on Nebius Token Factory, joined by a Postgres outbox.
+description: A Next.js app, a worker and Postgres on Coolify, sandboxes on Cloudflare Containers, and every model call through Otari, joined by a Postgres outbox.
 icon: Network
 ---
 
 <Diagram
   name="system"
-  alt="System: developers install the GitHub App and use the web app; GitHub webhooks reach the web app, which writes to a Postgres outbox; the worker claims them, reads registries, provider pages and Tavily, calls Nemotron on Token Factory, verifies in Cloudflare Containers, and writes branches, PRs, check runs and issues back to GitHub."
+  alt="System: developers install the GitHub App and use the web app; GitHub webhooks reach the web app, which writes to a Postgres outbox; the worker claims them, reads registries, provider pages and Otari's web search, calls the models through Otari, verifies in Cloudflare Containers, and writes branches, PRs, check runs and issues back to GitHub."
   caption="Every part of Teire and every outside service it calls."
 />
 
 | Part | Runs on | Does |
 |---|---|---|
-| Web app | Next.js 16 on Vercel | The landing page, sign-in, the dashboard, public scans and reports, run pages, the change catalog, these docs, and the GitHub webhook endpoint |
+| Web app | Next.js 16 on Coolify | The landing page, sign-in, the dashboard, public scans and reports, run pages, the change catalog, these docs, and the GitHub webhook endpoint |
 | Worker | Node 24 on Coolify | Webhooks, scans, fix runs, commands, the Dashboard issue, and the reliability ticker |
 | Postgres | Coolify | Findings, runs, events, receipts, the catalog, sessions, the outbox, and the job queues |
 | Sandbox | Cloudflare Containers | Installs and checks, one isolated container per side of a run |
-| Models | Nebius Token Factory | NVIDIA Nemotron 3 Ultra, with Super as failover |
-| Search | Tavily | Finding the notices of a provider that has no reader |
+| Models | [Otari](/docs/otari), Mozilla.ai's AI gateway | GLM 5.3 fixes, DeepSeek V4 Pro reviews, DeepSeek V4.1 Flash reads, MiniMax M3 researches, gpt-oss-120b answers Ask Teire. Otari picks each model's host and falls back to another when one fails |
+| Search | Otari's web search and fetch | Finding the notices of a provider that has no reader, and the pages the researcher reads |
 
 ## From GitHub to the worker
 
@@ -52,8 +52,7 @@ A ticker runs every 60 seconds. It:
 
 - writes the worker's heartbeat,
 - fails runs whose heartbeat stopped for 10 minutes (runs beat every 15 seconds) and scans silent for 10 minutes (scans beat every minute),
-- publishes which models are healthy,
-- re-checks Token Factory credits every 15 minutes,
+- re-checks an empty Otari balance every 15 minutes,
 - starts scheduled rescans (`schedule: daily | weekly`),
 - every 10 minutes, asks GitHub for failed webhook deliveries from the last 6 hours and redelivers the ones it never stored.
 

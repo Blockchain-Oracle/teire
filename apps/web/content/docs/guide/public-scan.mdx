@@ -58,7 +58,7 @@ Each change title links to its page in the [public catalog](/changes), with the 
 On an affected change, **Dry-run a fix** runs the whole fix as an installed repository would:
 
 1. the upgrade or model swap,
-2. the Nemotron agent, when the swap or upgrade alone does not pass,
+2. the fixer agent through Otari, with the researcher's brief, when the swap or upgrade alone does not pass,
 3. your checks in two sandboxes, before and after,
 4. the review of a passing agent fix.
 
@@ -83,18 +83,6 @@ The run page is one sheet, live while the run works: it reads the run every seco
 | **Receipt** | Model calls per model (count, tokens, cost), each sandbox command with its exit code and time, and the total |
 | **Proof** (beside) | Each check before and after, the verdict, what the checks did not cover, and every other project the change touched |
 | **Context** (beside) | The release notes, provider pages and docs lookups the run read |
-
-<Shot
-  name="run-sheet"
-  alt="Run page for zod 3.25.76 → 4.6.6 on teire-dev/examples, Finished and Proven in 3m 54s on Token Factory Sandboxes: the run as tiles, zod → examples → your code → dependabot-core → Nemotron 3 Ultra (7 attempts, 20 calls) → Sandbox, turning down to 2 checks → Review → Pull request #30; beside it the checks tile open, typecheck passing and tests 4/4 before and after, with two earlier attempts folded."
-  caption="A fix run on teire-dev/examples, finished: zod 4.6.6, proven with 4/4 tests on both sides, 22 Nemotron 3 Ultra calls for $0.163, on Token Factory Sandboxes."
-/>
-
-<Shot
-  name="run-sheet-steps"
-  alt="The run's Steps, with 'Nemotron 3 Ultra fixed the code' open: 18 tool calls such as reading npm-zod/src/intake.ts, searching z.record, looking up zod v4 ZodError issues in the docs, and editing src/schema.ts and src/intake.ts, each with its time."
-  caption="Each step opens: here the agent's 18 tool calls, from reading the code and looking up zod v4 in the docs to its edits."
-/>
 
 <Callout title="From a report to pull requests">
   Install Teire on the repository and the same changes arrive as pull requests, each verified the same way. See the [Quickstart](/docs/guide/quickstart).

@@ -53,12 +53,12 @@ Install with `uv sync --frozen --all-groups`, `poetry install --no-root`, `pipen
 
 ## In the evaluation
 
-| Repository | Upgrade | Sites | Nemotron 3 Ultra |
+| Repository | Upgrade | Sites | Result |
 |---|---|---|---|
-| demo-py-major | `anthropic` 0.125.0 → 1.15.0 | 4 | verified · 1 attempt · 11 steps · $0.042 |
-| demo-py-openai | `openai` 0.28.1 → 3.35.1 | 2 | verified · 1 · 8 · $0.036 |
-| demo-py-httpx | `httpx` 0.27.2 → 0.28.1 | 2 | verified · 1 · 12 · $0.045 |
-| demo-py-pydantic | `pydantic` 1.10.18 → 2.14.1 | 4 | verified · 2 · 29 · $0.205 |
+| demo-py-major | `anthropic` 0.125.0 → 1.15.0 | 4 | verified |
+| demo-py-openai | `openai` 0.28.1 → 3.35.1 | 2 | verified |
+| demo-py-httpx | `httpx` 0.27.2 → 0.28.1 | 2 | verified |
+| demo-py-pydantic | `pydantic` 1.10.18 → 2.14.1 | 4 | verified |
 | demo-py-clean | `httpx` 0.27.2 → 0.28.1, with a look-alike `Mirror.create(app=…, proxies=…)` | 0 | not affected · plain bump verified · $0 |
 
 The look-alike resolves to the repository's own class, not to httpx, so it isn't counted.

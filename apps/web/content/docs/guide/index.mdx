@@ -6,11 +6,11 @@ icon: House
 
 <Diagram
   name="model-retirement"
-  alt="Sequence: Teire scans teire-dev/examples/wrapped-models, finds Groq's deprecations page, has Nemotron read it with verbatim quotes, traces the wrapped model IDs to the request, swaps the one with a single named replacement and has Nemotron choose between two for the other, verifies 0/4 → 4/4 tests in the sandbox, and composes the ready PR it would open."
-  caption="A real evaluation run: the repository keeps both IDs in a tier registry, not in a model: argument. Installed, the last step opens the PR."
+  alt="Sequence: Teire scans teire-dev/examples/wrapped-models, finds Groq's deprecations page through the SDK and an Otari web search, has the reader model read it with verbatim quotes, traces the wrapped model IDs to the request, swaps the one with a single named replacement and has the fixer model choose between two for the other, verifies 0/4 → 4/4 tests in the sandbox, and composes the ready PR it would open."
+  caption="A real evaluation run, from before Teire moved its model calls to Otari: the repository keeps both IDs in a tier registry, not in a model: argument. Installed, the last step opens the PR."
 />
 
-Teire watches every dependency and API your repository uses: six package ecosystems, the AI and payment APIs your code calls, and the runtimes it is pinned to. When a change reaches your code, Teire finds the exact lines, NVIDIA Nemotron 3 Ultra on Nebius Token Factory edits what a plain swap cannot, your own checks run before and after in a sandbox, and the pull request shows the evidence.
+Teire watches every dependency and API your repository uses: six package ecosystems, the AI and payment APIs your code calls, and the runtimes it is pinned to. When a change reaches your code, Teire finds the exact lines, GLM 5.3 through Mozilla.ai's [Otari](/docs/otari) gateway edits what a plain swap cannot, your own checks run before and after in a sandbox, and the pull request shows the evidence.
 
 ## One change, end to end
 
@@ -19,17 +19,17 @@ The flow above, step by step, from Teire's evaluation on [teire-dev/examples/wra
 <Accordions type="multiple">
 <Accordion title="Notice">
 
-`groq-sdk` is installed and Teire has no hand-written reader for Groq. The SDK's own published code names `api.groq.com`. Groq's `llms.txt` and a Tavily search led to `console.groq.com/docs/deprecations`. Nemotron read that page into change records, and each record was kept only because its quote appears word for word in the fetched page.
+`groq-sdk` is installed and Teire has no hand-written reader for Groq. The SDK's own published code names `api.groq.com`. Groq's `llms.txt` and a web search through Otari led to `console.groq.com/docs/deprecations`. The reader model read that page into change records, and each record was kept only because its quote appears word for word in the fetched page.
 
 </Accordion>
 <Accordion title="Impact">
 
-`llama-3.1-8b-instant` sits in `src/models.ts:7` as `TIERS.quick.id`, not as a `model:` argument, so plain text search can't tell whether it reaches a request. Nemotron traced it: *"src/llm.ts:12 `model: t.id,`"*. Code then checked that the cited line exists in a file the model was shown and names a model. Only then did the finding become **affected**.
+`llama-3.1-8b-instant` sits in `src/models.ts:7` as `TIERS.quick.id`, not as a `model:` argument, so plain text search can't tell whether it reaches a request. The reader model traced it: *"src/llm.ts:12 `model: t.id,`"*. Code then checked that the cited line exists in a file the model was shown and names a model. Only then did the finding become **affected**.
 
 </Accordion>
 <Accordion title="Fix">
 
-Teire swapped `llama-3.1-8b-instant` for the one replacement Groq names. For `llama-3.3-70b-versatile` Groq names two, so Nemotron 3 Ultra chose `openai/gpt-oss-120b`. It also raised the quick tier's token limit so the new model has room to answer: 1 attempt, 12 steps, $0.095.
+Teire swapped `llama-3.1-8b-instant` for the one replacement Groq names. For `llama-3.3-70b-versatile` Groq names two, so the fixer model chose `openai/gpt-oss-120b`. It also raised the quick tier's token limit so the new model has room to answer.
 
 </Accordion>
 <Accordion title="Verify">
@@ -73,7 +73,7 @@ Six package ecosystems, each diffed with a tool built for its language:
 
 <EcosystemGrid />
 
-The APIs your code calls. These providers have a reader written for their change pages. Any other API host in your code or your SDKs is discovered and read by Nemotron under the same quote rule ([Providers](/docs/ecosystems/providers)).
+The APIs your code calls. These providers have a reader written for their change pages. Any other API host in your code or your SDKs is discovered and read by the reader model under the same quote rule ([Providers](/docs/ecosystems/providers)).
 
 <ProviderRow />
 
@@ -83,20 +83,20 @@ Node.js and Python runtimes are checked against their end-of-life dates. Those a
 
 <Diagram
   name="system"
-  alt="System: developers install the GitHub App and use the web app; GitHub webhooks reach the web app, which writes to a Postgres outbox; the worker claims them, reads registries, provider pages and Tavily, calls Nemotron on Token Factory, verifies in Cloudflare Containers, and writes branches, PRs, check runs and issues back to GitHub."
-  caption="The web app on Vercel, the worker and Postgres on Coolify, the sandbox on Cloudflare Containers, and every model call on Nebius Token Factory."
+  alt="System: developers install the GitHub App and use the web app; GitHub webhooks reach the web app, which writes to a Postgres outbox; the worker claims them, reads registries, provider pages and Otari's web search, calls the models through Otari, verifies in Cloudflare Containers, and writes branches, PRs, check runs and issues back to GitHub."
+  caption="The web app, the worker and Postgres on Coolify, the sandbox on Cloudflare Containers, and every model call through Otari."
 />
 
 ## What Teire never does
 
 - Push to your default branch or merge anything. Every change goes to a `teire/…` branch in a pull request.
 - Run your code outside a sandbox. Your checks run there with the network off.
-- Send your code to any model but NVIDIA Nemotron on Nebius Token Factory.
+- Send your code to any model except through Otari.
 - Act on a provider's change unless its quote matches the page it came from.
 
 <Cards>
   <Card title="Quickstart" href="/docs/guide/quickstart" />
   <Card title="How Teire works" href="/docs/guide/how-it-works" />
   <Card title="Anatomy of a Teire PR" href="/docs/guide/anatomy-of-a-pr" />
-  <Card title="Nemotron on Token Factory" href="/docs/nemotron" />
+  <Card title="Teire on Otari" href="/docs/otari" />
 </Cards>

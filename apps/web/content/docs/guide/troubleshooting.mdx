@@ -19,7 +19,7 @@ Teire opens no fix PRs until **Configure Teire** is merged. The repository's sta
 By default at most 5 Teire PRs are open and 2 new ones open per hour. A run over the limit shows **waiting for the PR limit** and tries again an hour later. Merge or close PRs, or raise `pullRequests.limit` and `perHour`.
 </Accordion>
 <Accordion title="Model work is paused">
-When the daily model budget is used up ($10 per 24 hours by default) or Token Factory credits run out, runs show **waiting for the model budget** or **waiting for Token Factory credits**. They try again every 30 minutes. The [trust page](/trust) shows the live state.
+When the installation's AI allowance on Otari is spent, a run shows **waiting for this installation's AI allowance** (a dry run: **waiting for your AI allowance**) until the allowance resets. When Teire's Otari balance is empty, runs show **waiting for Otari credit** until it is topped up. The [trust page](/trust) shows the live state. See [Allowances](/docs/otari/allowances).
 </Accordion>
 <Accordion title="The change does not reach your code">
 A major with no resolved use is **not affected**, when resolved by type, or **inconclusive** otherwise. Either way it becomes a plain bump. So does every minor or patch. Plain bumps open only while `upgrades.plainBumps` is on (the default), and they come last in the queue.

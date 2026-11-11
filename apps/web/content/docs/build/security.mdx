@@ -1,18 +1,12 @@
 ---
 title: Security and trust
-description: Your code runs only in an isolated sandbox with the network off for checks. No secret enters it. Only Nemotron on Token Factory reads code, and nothing reaches your default branch without your merge.
+description: Your code runs only in an isolated sandbox with the network off for checks. No secret enters it. Only the models Teire calls through Otari read code, and nothing reaches your default branch without your merge.
 icon: Lock
 ---
 
-<Shot
-  name="trust"
-  alt="How Teire runs on teire.vercel.app: the worker's heartbeat and commit, model credits available, Nemotron 3 Ultra answering, missed deliveries; the week's model spend and run outcomes as one bar; then where your code goes as two flows, public on Token Factory Sandboxes and private on Cloudflare, with the network cut before your checks."
-  caption="The live trust page in production: the worker's heartbeat and version, credits, model routing and missed deliveries, then spend, permissions and where code goes."
-/>
-
 ## The sandbox
 
-A private repository's installs and checks run on **Cloudflare Containers**: one Durable Object drives one container, and each side of a run gets its own. A public repository's, and every dry run's, run on [Token Factory Sandboxes](/docs/build/token-factory-sandboxes), a microVM per command, with no network interface during the checks.
+Installs and checks run on **Cloudflare Containers**: one Durable Object drives one container, and each side of a run gets its own.
 
 On Cloudflare Containers:
 
@@ -47,7 +41,7 @@ The [threat model](https://github.com/teire-dev/teire/blob/main/apps/resolver/TH
 
 ## The agent
 
-The model is handed file contents, documentation, check output and provider pages **as data, never as instructions**. Code limits what it can do:
+The model is handed file contents, documentation, check output and provider pages **as data, never as instructions**. Release notes, vendor pages and the research brief also pass a prompt-injection guardrail that Otari runs before any model reads them ([Research, MCP and guardrails](/docs/otari/research)). Code limits what it can do:
 
 - It edits only the files the change reaches and the files your check output names.
 - It never edits manifests, lockfiles, `tsconfig`, build config, CI, `.env` files or credentials.
@@ -74,6 +68,6 @@ Teire never merges and never pushes to your default branch. Commands and dashboa
 
 ## Where your code goes
 
-- **Models.** Only NVIDIA Nemotron on Nebius Token Factory reads code.
-- **Search.** Tavily receives search queries that name a provider, such as "Groq API deprecations…", never code.
+- **Models.** Only the open-weight models Teire calls through [Otari](/docs/otari), with one service key, read code.
+- **Search.** Otari's web search receives queries that name a provider or a package, such as "Groq API deprecations…", never code.
 - **Storage.** A scan downloads the repository at one commit and deletes it when the scan ends. Teire keeps the findings (file, line and the matching line), the diffs it proposes, run logs, receipts, and the tail of each sandbox command's output.
