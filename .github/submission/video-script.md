@@ -47,7 +47,7 @@ own.
    [the dashboard's overview]
 
 Now I'll walk you through the features, in the order you'd meet them: the scan, the fix, the proof, Otari's tools, the
-guardrail, and allowances, with Ask Teire.
+guardrail, and allowances.
 
 8 · THE SCAN · 1:40
    [teire-demo-bristow → its findings: gpt-3.5-turbo, gpt-4 → click one call site]
@@ -82,13 +82,13 @@ The guardrail. Here's a changelog with an instruction slipped in: ignore all pre
 that runs on install. Before any model reads it, Otari runs Teire's prompt-injection check, and refuses it. The fix
 carries on with zod's real release notes.
 
-13 · ALLOWANCES AND ASK TEIRE · 2:59
-   [Settings › Allowances → the meters → move yourself to teire-walk-tiny → Ask Teire: "What needs me today?" → the refusal → move back → ask again → the docs: Ask Teire "How does Teire prove a fix?" → "through Otari: MCP teire/search_docs" under the answer]
+13 · ALLOWANCES · 2:59
+   [Docs › Allowances → the budgets table → "Before work starts" → the Settings › Allowances screenshot → Docs › Research: Teire's MCP server]
 
 Allowances. Every call is billed on Otari to whoever it's for: fifty cents a day for me, three dollars for my
-installation. Watch this. I move myself to a tiny budget and ask Teire what needs me today. It says my allowance is
-used up, and when it comes back. Nobody else stops. I move myself back, and it answers with the dashboard's own cards.
-In the docs, Ask Teire uses MCP: Otari calls Teire's own MCP server, and the answer names the call.
+installation. Before any work starts, Teire asks Otari what's left. A person who runs out is told when it comes back,
+and nobody else stops. As the operator, I can move anyone to another budget, or pause them. And Ask Teire uses MCP:
+Otari calls Teire's own MCP server to answer from the docs.
 
 14 · THE REST · 3:24
    [the Dashboard issue → an @teire comment → /changes → /api/mcp]
@@ -97,10 +97,10 @@ And the rest, quickly. Every repo gets a Dashboard issue with its deadlines, and
 lists every shutdown Teire has read. And for developers, a CLI for CI, and an MCP server for your coding agent.
 
 15 · UNDER THE HOOD · 3:37
-   [otari.ai dashboard → Routing: the teire policies → Requests: each call's end user, model and policy → Spend & budgets]
+   [the trust page: Otari's ceiling, what's left, spend per model → Docs › Teire on Otari: the routing policy table]
 
-Under the hood, here's Otari's own dashboard: a routing policy per job, every request with the person or repo who paid,
-the model that answered, and the budgets that cap them.
+Under the hood, the trust page reads Otari live: one ceiling over the whole key, what's left, and what each model
+cost. And every job's routing policy is listed in the docs.
 
 16 · DOCS · 3:45
    [the docs → Teire on Otari]
@@ -114,6 +114,4 @@ It's live right now, and it's open source. Teire — when upstream breaks, Teire
 
 ---
 Have ready
-- Signed in as yourself; you're the operator, so Settings › Allowances shows every end user and the Move buttons.
-- Part 11: the zod run https://teire-otari.vercel.app/runs/2f804cf8-de46-4de7-aca8-a0769d82b320?tile=change
-- Part 15: otari.ai signed in, Default workspace.
+- Read along with the silent cut: each part starts when its title appears.
