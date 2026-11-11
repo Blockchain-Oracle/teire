@@ -618,6 +618,11 @@ function ReplyActions({
           ${cost.toFixed(4)}
         </span>
       ) : null}
+      {message.metadata?.otariTools?.length ? (
+        <span className="ml-1 font-mono text-[11px] text-ink-3">
+          through Otari: {message.metadata.otariTools.join(" · ")}
+        </span>
+      ) : null}
     </div>
   );
 }

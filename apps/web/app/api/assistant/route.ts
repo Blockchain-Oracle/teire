@@ -4,6 +4,7 @@ import {
   type GatewayReceipt,
   type McpServer,
   noReceipt,
+  type OtariToolCall,
   receiptOf,
   sumReceipts,
 } from "@teire/engine/gateway";
@@ -62,6 +63,18 @@ const DOCS_MCP: McpServer[] = [
     purpose_hint: "Version-specific library documentation",
   },
 ];
+
+/** Otari's tools a reply used, as its footer names them: `MCP teire/search_docs`, `web search`. */
+function otariTools(calls: OtariToolCall[]): { otariTools?: string[] } {
+  const names = [
+    ...new Set(
+      calls.map((c) =>
+        c.type === "mcp" ? `MCP ${c.server ?? ""}/${c.name ?? ""}` : c.type.replace("_", " "),
+      ),
+    ),
+  ];
+  return names.length ? { otariTools: names } : {};
+}
 
 const DOCS_TOOLS = ["search_docs", "list_changes", "get_change", "show_steps", "offer_choices"] as const;
 
@@ -236,6 +249,7 @@ export async function POST(request: Request) {
             tokensIn: r.tokensIn,
             tokensOut: r.tokensOut,
             costUsd: Number(r.costUsd.toFixed(5)),
+            ...otariTools(r.toolCalls),
           };
         }
         return undefined;
@@ -262,6 +276,7 @@ export async function POST(request: Request) {
               tokensIn: r.tokensIn,
               tokensOut: r.tokensOut,
               costUsd: Number(r.costUsd.toFixed(5)),
+              ...otariTools(r.toolCalls),
               ...(interrupted ? { interrupted: true } : {}),
             };
             await saveMessage(thread.id, responseMessage, interrupted);

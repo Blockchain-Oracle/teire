@@ -16,6 +16,8 @@ export interface AssistantMetadata {
   interrupted?: boolean;
   /** Helpful (1) or not (-1), from the person. */
   rating?: 1 | -1;
+  /** Otari's own tools the reply used (`MCP teire/search_docs`, `web search`), named under it. */
+  otariTools?: string[];
 }
 
 export interface AssistantNotice {

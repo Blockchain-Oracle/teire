@@ -302,6 +302,15 @@ export function Terminal({ exec }: { exec: Exec }) {
 
 /** Documents Otari's prompt-injection guardrail refused: shown first, where the run's reading is. */
 const REFUSED = "Refused by Otari's guardrail";
+/** The researcher's calls to Otari's own tools (search, fetch, MCP, code execution). */
+const TOOLS = "Through Otari's tools";
+const TOOL_NAMES: Record<string, string> = {
+  web_search: "Web search",
+  web_fetch: "Web fetch",
+  code_execution: "Code execution",
+};
+/** How run.ts begins the research event that carries the sandbox's output. */
+const SANDBOX = "Code proof in Otari's sandbox:";
 
 export interface ContextItem {
   title: string;
@@ -318,9 +327,33 @@ export function contextOf(sheet: RunSheetData): [string, ContextItem[]][] {
     [REFUSED]: [],
     "Release notes": [],
     "Provider pages": [],
+    [TOOLS]: [],
     "Researcher read": [],
     "Docs answers": [],
   };
+  // The researcher's turns in Otari's own tool loop: each search, fetch and MCP call, and the code
+  // proof Otari's sandbox printed.
+  for (const e of sheet.events) {
+    if (e.step !== "research") continue;
+    const p = e.payload as {
+      calls?: { name: string; input?: Record<string, string> }[];
+      detail?: unknown;
+    } | null;
+    for (const c of p?.calls ?? []) {
+      const said = (c.input?.query ?? c.input?.url ?? "").replace(/^https?:\/\//, "");
+      groups[TOOLS]?.push({
+        title: `${c.name.startsWith("mcp:") ? `MCP ${c.name.slice(4)}` : (TOOL_NAMES[c.name] ?? c.name)}${said ? `: ${said}` : ""}`,
+        url: c.input?.url ?? null,
+        quote: null,
+      });
+    }
+    if (typeof p?.detail === "string" && p.detail.startsWith(SANDBOX))
+      groups[TOOLS]?.push({
+        title: "Code execution: both versions installed in Otari's sandbox",
+        url: null,
+        quote: p.detail.slice(SANDBOX.length).trim(),
+      });
+  }
   const kinds: Record<string, string> = {
     refused: REFUSED,
     "release-notes": "Release notes",
