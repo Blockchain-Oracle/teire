@@ -43,10 +43,12 @@ DOCS = [
     ("scan", "/scan", ["desktop", "phone"], None),
     ("trust", "/trust", ["desktop"], None),
 ]
-# Signed in, captured in the owner's own browser at the same sizes: dashboard (/app), repos,
-# repo-findings, repo-config, changes-for-you, settings (/app/settings/usage), allowances
-# (/app/settings/allowances), welcome, runtime-notice, ask-overview, ask-docked, ask-why, ask-action,
-# ask (phone), and the public reports report-axios, report-flask, report-gin (scans started signed in).
+# Signed in, captured in a signed-in browser at the same sizes (1920x1080 desktop, 390x844 phone):
+# dashboard (/app), repos, repo-findings, findings-ruby (faraday open on examples), runtime-notice
+# (Node.js 20 open on examples), repo-config, changes-for-you, settings (/app/settings/usage),
+# allowances (/app/settings/allowances), welcome, ask-overview, ask-docked, ask-why, ask-action,
+# ask (phone), and the public reports report-axios (and phone), report-flask, report-gin (scans
+# started signed in). Last taken 2026-11-11 on the Blockchain-Oracle installation.
 CONSOLE = "() => { const t = document.querySelector('[role=tablist]'); if (t) window.scrollTo(0, t.getBoundingClientRect().top + window.scrollY - 96); }"
 FOCUS = "(id) => { const e = document.getElementById(id); if (e) window.scrollTo(0, e.getBoundingClientRect().top + window.scrollY - 140); }"
 
