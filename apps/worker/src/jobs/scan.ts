@@ -61,6 +61,7 @@ import {
   finishScan,
   fixInFlight,
   fixModeOf,
+  followBranch,
   getArtifact,
   getRepo,
   heartbeatScan,
@@ -823,7 +824,12 @@ export async function scanRepo(
       if (pr && pr.state !== "merged") continue;
       // A target whose run moved, fell back or stopped this week gives the same answer again.
       if (await recentlySettled(db, repoId, c.groupKey)) continue;
-      if (await fixInFlight(db, repoId, c.groupKey)) continue;
+      if (await fixInFlight(db, repoId, c.groupKey)) {
+        await followBranch(db, repoId, c.groupKey, sha, c.from || null).catch((error) =>
+          console.error(`[scan] ${repo.fullName}: ${c.groupKey}: follow the branch: ${error}`),
+        );
+        continue;
+      }
       const { run, created } = await claimRun(db, {
         repoId,
         groupKey: c.groupKey,

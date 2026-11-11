@@ -432,6 +432,38 @@ export async function fixInFlight(
   return run ?? null;
 }
 
+/**
+ * A queued run follows the branch: one held for the PR limit can wait hours or days, and would
+ * otherwise build on the commit the scan that queued it saw, missing everything pushed since (a
+ * zod run queued on 2026-11-10 built on that day's commit and never read the changelog teire.yml
+ * named the next morning). Each scan that still proposes the group moves its queued run, while no
+ * worker holds it, to the scan's own commit and installed version; a claimed or running run keeps
+ * its base. Returns whether the run moved.
+ */
+export async function followBranch(
+  db: Database,
+  repoId: number,
+  groupKey: string,
+  sha: string,
+  fromVersion: string | null,
+) {
+  const moved = await db
+    .update(runs)
+    .set({ baseSha: sha, ...(fromVersion ? { fromVersion } : {}), updatedAt: new Date() })
+    .where(
+      and(
+        eq(runs.repoId, repoId),
+        eq(runs.kind, "fix"),
+        eq(runs.groupKey, groupKey),
+        eq(runs.status, "queued"),
+        isNull(runs.workerId),
+        sql`${runs.baseSha} is distinct from ${sha}`,
+      ),
+    )
+    .returning({ id: runs.id });
+  return moved.length > 0;
+}
+
 /** Lineages with an open finding: what an open Teire PR in that lineage still answers (C6). */
 export async function openLineages(db: Database, repoId: number) {
   const rows = await db
