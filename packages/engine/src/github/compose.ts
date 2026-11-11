@@ -312,11 +312,12 @@ function receiptLines(
   run: FixRun,
   backendNote: string,
   notesReceipt?: { model: string; tokensIn: number; tokensOut: number; costUsd: number },
+  notesRefused = 0,
 ) {
   const out = ["### Receipt", "| Step | Model | Tokens in / out | Cost |", "|---|---|---|---|"];
   if (notesReceipt)
     out.push(
-      `| Read the release notes | ${modelName(notesReceipt.model)} | ${tokens(notesReceipt.tokensIn)} / ${tokens(notesReceipt.tokensOut)} | ${usd(notesReceipt.costUsd)} |`,
+      `| Read the release notes${notesRefused ? `; guardrail refused ${notesRefused}` : ""} | ${modelName(notesReceipt.model)} | ${tokens(notesReceipt.tokensIn)} / ${tokens(notesReceipt.tokensOut)} | ${usd(notesReceipt.costUsd)} |`,
     );
   if (run.research) {
     const b = run.research.brief;
@@ -402,6 +403,8 @@ export interface FixPullRequestInput {
   /** Behaviour changes read from the notes (candidate records, quoted). */
   behaviour: ChangeV2[];
   notesReceipt?: { model: string; tokensIn: number; tokensOut: number; costUsd: number };
+  /** Release-note documents Otari's prompt-injection guardrail refused, left out of the reading. */
+  notesRefused?: string[];
   /** The updater resolved the package only this far (D103): the target was capped, and why. */
   targetMax?: { name: string; version: string; reason: string };
   /** Supply-chain changes between the installed version and the target (D-14). */
@@ -653,6 +656,10 @@ export function composeFixPullRequest(input: FixPullRequestInput): { title: stri
       out.push(
         `${blockquote(sanitizeUpstream(`${note.quote.slice(0, 400)}${note.quote.length > 400 ? "…" : ""}`, upstreamRepoOf(note.url)))}\n>\n> — ${link(urlLabel(note.url) ?? "release notes", note.url)}${note.declared ? " (from this repository's teire.yml)" : ""}`,
       );
+    if (input.notesRefused?.length)
+      out.push(
+        `Otari's prompt-injection guardrail refused ${input.notesRefused.map((u) => link(urlLabel(u) ?? "a changelog", u)).join(", ")}, so Teire read the release notes without ${input.notesRefused.length > 1 ? "them" : "it"}.`,
+      );
 
     // What the researcher read before the fix (S04), through Otari's search, fetch and MCP tools.
     if (run.research && run.research.screened !== "refused") {
@@ -774,7 +781,7 @@ export function composeFixPullRequest(input: FixPullRequestInput): { title: stri
         run.target,
       ),
     );
-    out.push(...receiptLines(run, input.backendNote, input.notesReceipt));
+    out.push(...receiptLines(run, input.backendNote, input.notesReceipt, input.notesRefused?.length ?? 0));
 
     // Risks not covered
     out.push("### Risks not covered");
