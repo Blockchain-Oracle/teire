@@ -520,6 +520,23 @@ export async function fixModeOf(
 }
 
 /** Renews this worker's lease; false when another worker has taken the run (this one must stop). */
+/**
+ * Gives up the runs this worker still holds as it shuts down (a deploy): the process exits right
+ * after, and pg-boss puts each job back to retry in a minute, sooner than a two-minute lease runs
+ * out. Without this the retry met the dead worker's lease, skipped the run, and the reaper later
+ * failed it as interrupted with no job left to retry it (2026-11-11). The heartbeat is set past the
+ * lease, not cleared, so a run no retry takes is still reaped; this process's later writes are
+ * fenced, since it holds nothing now.
+ */
+export async function releaseLeases(db: Database, leaseMs: number) {
+  const { rows } = await db.execute<{ id: string }>(sql`
+    update runs set worker_id = null, heartbeat_at = now() - make_interval(secs => ${leaseMs / 1000})
+    where worker_id = ${WORKER_ID} and status in ('queued', 'running')
+    returning id
+  `);
+  return rows.length;
+}
+
 export async function renewLease(db: Database, runId: string) {
   const { rows } = await db.execute<{ id: string }>(sql`
     update runs set heartbeat_at = now() where id = ${runId} and worker_id = ${WORKER_ID} returning id

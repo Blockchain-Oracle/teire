@@ -16,7 +16,7 @@ import { scanRepo } from "./jobs/scan";
 import { startOutbox } from "./outbox";
 import { ensureQueues, QUEUES } from "./queues";
 import { markCreditsExhausted, startTicker } from "./reliability";
-import { getRun, upsertContributedChange } from "./store";
+import { getRun, releaseLeases, upsertContributedChange } from "./store";
 
 const PORT = Number(process.env.PORT ?? 8080);
 const databaseUrl = process.env.DATABASE_URL;
@@ -293,6 +293,9 @@ async function shutdown(signal: string) {
   for (const hook of shutdownHooks) await hook().catch(() => undefined);
   await boss.stop({ graceful: true, timeout: 30_000 });
   for (const hook of drainHooks) await hook().catch(() => undefined);
+  // Last write before exit: the runs still held go to the jobs pg-boss just put back to retry.
+  const released = await releaseLeases(db, RUNS.leaseMs).catch(() => 0);
+  if (released) console.log(`[worker] released ${released} run(s) for the next worker`);
   await pool.end();
   process.exit(0);
 }
