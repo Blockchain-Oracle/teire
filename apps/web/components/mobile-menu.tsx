@@ -123,7 +123,7 @@ export function MobileMenu({ links }: { links: readonly { href: string; label: s
                 className="flex items-center justify-center gap-2 rounded-full bg-sheet px-3 py-2 text-ink-2 ring-1 ring-rule hover:text-ink"
               >
                 <Play className="size-3.5 fill-current" aria-hidden />
-                Demo video
+                A live run
               </Link>
             </div>
           </div>

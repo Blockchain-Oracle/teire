@@ -22,6 +22,8 @@ const nextConfig = {
       { source: "/docs/mcp", destination: "/docs/build/mcp", permanent: false },
       { source: "/docs/config", destination: "/docs/guide/configuration", permanent: false },
       // The model section moved with the gateway (S06): old links land on its Otari pages.
+      // The demo, until the recorded video is embedded on its own page: the live run it walks through.
+      { source: "/demo", destination: "/runs/c154b1d4-ed40-4860-912d-5c587916c2e2", permanent: false },
       { source: "/docs/nemotron", destination: "/docs/otari", permanent: true },
       { source: "/docs/nemotron/receipts", destination: "/docs/otari/receipts", permanent: true },
       { source: "/docs/nemotron/evaluation", destination: "/docs/otari/evaluation", permanent: true },

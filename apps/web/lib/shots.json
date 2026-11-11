@@ -3,7 +3,7 @@
     "width": 780,
     "height": 1688
   },
-  "phone/dryrun-ai-web-pr": {
+  "phone/pr-anthropic": {
     "width": 780,
     "height": 1688
   },
@@ -14,10 +14,6 @@
   "phone/scan": {
     "width": 780,
     "height": 1688
-  },
-  "wide/app-runs": {
-    "width": 1600,
-    "height": 900
   },
   "wide/ask-action": {
     "width": 1600,
@@ -47,23 +43,15 @@
     "width": 1600,
     "height": 900
   },
-  "wide/dryrun-ai-web-pr": {
-    "width": 1600,
-    "height": 900
-  },
-  "wide/dryrun-go-diff": {
-    "width": 1600,
-    "height": 900
-  },
-  "wide/dryrun-go-pr": {
-    "width": 1600,
-    "height": 900
-  },
   "wide/package-anthropic": {
     "width": 1600,
     "height": 900
   },
-  "wide/provider-groq": {
+  "wide/pr-anthropic": {
+    "width": 1600,
+    "height": 900
+  },
+  "wide/pr-bristow": {
     "width": 1600,
     "height": 900
   },
@@ -72,10 +60,6 @@
     "height": 900
   },
   "wide/repo-findings": {
-    "width": 1600,
-    "height": 900
-  },
-  "wide/repo-prs": {
     "width": 1600,
     "height": 900
   },
@@ -95,15 +79,7 @@
     "width": 1600,
     "height": 900
   },
-  "wide/run-reverify": {
-    "width": 1600,
-    "height": 900
-  },
   "wide/run-sheet-receipt": {
-    "width": 1600,
-    "height": 900
-  },
-  "wide/run-sheet-steps": {
     "width": 1600,
     "height": 900
   },

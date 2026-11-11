@@ -16,7 +16,7 @@ const COLUMNS = [
       { href: "/changes", label: "Changes" },
       { href: INSTALL_URL, label: "Install on GitHub" },
       { href: "/app", label: "Dashboard" },
-      { href: "/demo", label: "Demo video" },
+      { href: "/demo", label: "A live run" },
     ],
   },
   {

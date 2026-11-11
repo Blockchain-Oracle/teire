@@ -356,7 +356,7 @@ function Code() {
       <div className="grid gap-3 md:grid-cols-2">
         <Fact
           brand={STACK.model}
-          title="The only model that reads code"
+          title="Only open-weight models read code"
           line="Open-weight models through Otari (mozilla.ai): one model per job, with Otari falling back across hosts. Every call is on its run's receipt, with the model and host that answered."
         />
         <Fact
