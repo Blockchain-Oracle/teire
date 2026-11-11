@@ -70,7 +70,7 @@ export function ProofCard({ className }: { className?: string }) {
             {/* Long values (143/143, swapped) step down so the pen's ring still holds them. */}
             <span
               data-ok
-              className={cn("w-fit text-hero-proven", (r.after ?? "").length > 5 && "text-[18px]")}
+              className={cn("w-fit text-hero-proven", (r.after ?? "").length > 5 && "text-[16px]")}
             >
               ✓ {r.after}
             </span>
