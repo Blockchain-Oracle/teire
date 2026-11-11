@@ -350,6 +350,8 @@ export const DISCOVERY = {
     /** Otari's `search_domain_filter` takes at most 20 domains. */
     maxDomains: 20,
     timeoutMs: 30_000,
+    /** The reader's list of results when search runs as Otari's built-in tool (8 URLs and titles). */
+    listMaxTokens: 1500,
     /** A fetched page's text is cut here (Otari's built-in fetcher reads at most 5 MiB). */
     fetchMaxChars: 200_000,
   },
