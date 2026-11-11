@@ -1,5 +1,5 @@
 import { gte, llmCalls, runs, sql, systemState } from "@teire/db";
-import { ASSISTANT } from "@teire/engine/constants";
+import { ASSISTANT, modelDisplayName } from "@teire/engine/constants";
 import {
   Activity,
   Ban,
@@ -135,9 +135,10 @@ async function Live() {
     })
     .from(llmCalls)
     .where(gte(llmCalls.createdAt, week));
-  // By the model Otari served: a call asked for by routing-policy name counts under what answered it.
+  // By the model Otari served, as people say it: a call asked for by routing-policy name counts under
+  // what answered it, and one model's host spellings (`accounts/fireworks/models/glm-5p3`) fold together.
   const answered = sql<string>`coalesce(${llmCalls.servedModel}, ${llmCalls.model})`;
-  const byModel = await db
+  const served = await db
     .select({
       model: answered,
       calls: sql<number>`count(*)::int`,
@@ -146,6 +147,13 @@ async function Live() {
     .from(llmCalls)
     .where(gte(llmCalls.createdAt, week))
     .groupBy(answered);
+  const folded = new Map<string, { model: string; calls: number; cost: number }>();
+  for (const row of served) {
+    const model = modelDisplayName(row.model);
+    const m = folded.get(model) ?? { model, calls: 0, cost: 0 };
+    folded.set(model, { model, calls: m.calls + row.calls, cost: m.cost + Number(row.cost) });
+  }
+  const byModel = [...folded.values()].sort((a, b) => b.cost - a.cost);
   const outcomes = await db
     .select({
       kind: sql<string>`coalesce(${runs.evidenceKind}, ${runs.status})`,

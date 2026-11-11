@@ -51,9 +51,9 @@ export const ROLE_ENV = {
 
 /** People's names for the open-weight models the roles run on (ids from Otari's catalog or its hosts). */
 const MODEL_NAMES: [RegExp, string][] = [
-  [/glm-5[.p]3/i, "GLM 5.3"],
+  [/glm-5[.p-]3/i, "GLM 5.3"],
   [/kimi-k2[.p]6/i, "Kimi K2.6"],
-  [/deepseek-v4[.p]1-flash/i, "DeepSeek V4.1 Flash"],
+  [/deepseek-v4[.p-]1-flash/i, "DeepSeek V4.1 Flash"],
   [/deepseek-v4-pro/i, "DeepSeek V4 Pro"],
   [/minimax-m3/i, "MiniMax M3"],
   [/gpt-oss-120b/i, "gpt-oss-120b"],
